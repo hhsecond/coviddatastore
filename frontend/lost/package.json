@@ -23,6 +23,7 @@
     "@fortawesome/react-fontawesome": "^0.1.4",
     "axios": "^0.18.1",
     "bootstrap": "^4.3.1",
+    "bootstrap-icons": "^1.0.0-alpha3",
     "browserslist": "^4.11.1",
     "caniuse-lite": "^1.0.30001042",
     "chart.js": "^2.7.2",

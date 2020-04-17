@@ -36,7 +36,6 @@ export default class Point extends React.Component {
       for(let i=x-1.5; i<=x+1.5;i=i+0.5){
         for(let j=y-1.5; j<=y+1.5;j=j+0.5){
           if(i in data && j in data[i]){
-            console.log(i, j, data)
             return data[i][j]
           }
         }
@@ -44,26 +43,28 @@ export default class Point extends React.Component {
   }
 
   componentDidMount(){
+    const yMargin = this.props.yMargin+window.pageYOffset
     let xx = this.myRef.current.getBoundingClientRect();
     let data = this.props.static_data.data
-    let isPresent = this.isPresent(xx.x-this.props.xMargin, xx.y-54, data)
+    let isPresent = this.isPresent(xx.x-this.props.xMargin, xx.y-yMargin, data)
     if(isPresent){
       this.setState({backgroundColor:this.props.colors[isPresent]})
     }
   }
 
   onHover = e => {
+    const yMargin = this.props.yMargin+window.pageYOffset
     if (
       this.props.is_mousedown &&
       this.state.label === null &&
       this.state.backgroundColor === "grey"
     ) {
       if (this.props.color) {
-        if(e.pageY<=(this.props.imageDimentions.height+54)){
+        if(e.pageY<=(this.props.imageDimentions.height+yMargin)){
           this.setStateWrapper({ backgroundColor: this.props.color });
           this.props.addToHoveredPoints(
             e.pageX,
-            e.pageY-54,
+            e.pageY-yMargin,
             parseInt(this.row),
             parseInt(this.column),
             this.props.grid_number

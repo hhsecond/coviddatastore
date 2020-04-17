@@ -3,6 +3,7 @@ import axios from "axios";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
+import {Redirect} from 'react-router-dom'
 
 import { API_URL } from "../../settings";
 
@@ -84,6 +85,7 @@ export default class Image extends React.Component {
         history_coordinates: [[], []],
         rows_columns_data: {},
         coordinates_data: {},
+        redirect: false,
         static_data:{
           'imageUrl':null,
           'data':{}
@@ -274,6 +276,59 @@ export default class Image extends React.Component {
     this.setState({ modalShow: value });
   };
 
+
+  renderNextButton = () =>{
+    if(this.state.redirect){
+      return(<Redirect to='/dashboard'/>)
+    }
+    if(this.props.annos.image.isLast){
+      return(<Button
+        type="button"
+        variant="danger"
+        onClick={() => {
+          this.setState({redirect:true})
+        }}
+      >
+        Finish
+      </Button>)
+      //   
+    }else{
+      return(<Button
+        type="button"
+        disabled={this.state.posting}
+        onClick={() => {
+          if (hovered_points[0].length || hovered_points[1].length) {
+            alert("unsaved data");
+          } else {
+            // this.reset(this.props.nextImage);
+            if(Object.keys(this.state.coordinates_data).length !== 0){
+              this.postAnnotationAsync().then(data => {
+                this.setState({ posting: false }, () => {
+                  this.reset(this.props.nextImage);
+                });
+              });
+            }else{
+              this.reset(this.props.nextImage);
+            }
+          }
+        }}
+      >
+        {this.state.posting ? (
+          <Spinner
+            as="span"
+            animation="border"
+            size="sm"
+            role="status"
+            aria-hidden="true"
+          />
+        ) : (
+          "Next Image"
+        )}
+      </Button>)
+    }
+  }
+
+
   postAnnotationAsync = () => {
     let payload;
     let data = [];
@@ -320,10 +375,16 @@ export default class Image extends React.Component {
   render() {
     // console.log(
     //   "!!!!static_data",
-    //   this.state.static_data
+    //   this.props.annos
     // );
+    // if(this.myRef.current){
+    //   console.log(this.myRef.current.getBoundingClientRect()["y"])
+    // }else{
+    //   console.log(this.myRef.current)
+    // }
     return (
       <div style={{ backgroundColor: "grey" }}>
+        <div style={{textAlign:'center', color:'white'}}>{this.props.annos.image.url}</div>
         <div
           style={{
             width: 1100,
@@ -359,6 +420,7 @@ export default class Image extends React.Component {
                     colors={this.state.colors}
                     static_data={this.state.static_data}
                     xMargin={this.myRef.current.getBoundingClientRect()["x"]}
+                    yMargin={this.myRef.current?this.myRef.current.getBoundingClientRect()["y"]:null}
                     color={this.state.color}
                     label={this.state.value.label}
                     label_id={this.state.value.id}
@@ -395,6 +457,7 @@ export default class Image extends React.Component {
                     colors={this.state.colors}
                     static_data={this.state.static_data}
                     xMargin={this.myRef.current.getBoundingClientRect()["x"]}
+                    yMargin={this.myRef.current?this.myRef.current.getBoundingClientRect()["y"]:null}
                     color={this.state.color}
                     label={this.state.value.label}
                     label_id={this.state.value.id}
@@ -502,39 +565,8 @@ export default class Image extends React.Component {
                 />
               </div>
             </div>
-
-            <Button
-              type="button"
-              disabled={this.state.posting}
-              onClick={() => {
-                if (hovered_points[0].length || hovered_points[1].length) {
-                  alert("unsaved data");
-                } else {
-                  // this.reset(this.props.nextImage);
-                  if(Object.keys(this.state.coordinates_data).length !== 0){
-                    this.postAnnotationAsync().then(data => {
-                      this.setState({ posting: false }, () => {
-                        this.reset(this.props.nextImage);
-                      });
-                    });
-                  }else{
-                    this.reset(this.props.nextImage);
-                  }
-                }
-              }}
-            >
-              {this.state.posting ? (
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                />
-              ) : (
-                "Next Image"
-              )}
-            </Button>
+            {this.renderNextButton()}
+            
           </div>
         ) : null}
       </div>

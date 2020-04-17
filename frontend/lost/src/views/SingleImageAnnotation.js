@@ -26,7 +26,10 @@ class SingleImageAnnotation extends Component {
 
 	render(){
 		return (
-			<SIA></SIA>
+			<React.Fragment>
+				<WorkingOnSIA annoTask={this.props.workingOnAnnoTask}></WorkingOnSIA>
+				<SIA></SIA>
+			</React.Fragment>
 		)
 	}
 }

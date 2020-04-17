@@ -28,13 +28,9 @@ class WorkingOnSIA extends Component {
         super();
     
         this.state = {
-          modalIsOpen: true,
           height: undefined
         };
     
-        this.openModal = this.openModal.bind(this);
-        this.afterOpenModal = this.afterOpenModal.bind(this);
-        this.closeModal = this.closeModal.bind(this);
         this.myref = React.createRef()
       }
 
@@ -44,29 +40,24 @@ class WorkingOnSIA extends Component {
     }
 
     componentDidUpdate(){
-        const checkHeight = this.myref.current.getBoundingClientRect().height 
+        if(this.myref.current){}
+        const checkHeight = ( ()=> {
+            if(this.myref.current){
+                return this.myref.current.getBoundingClientRect().height
+            }else{
+                return 96
+            }
+        })()
         if (checkHeight !== this.state.height){
             this.props.siaLayoutUpdate()
             this.setState({height: checkHeight})
         }
         this.props.refreshToken()
     }
-    openModal() {
-        this.setState({modalIsOpen: true});
-    }
-
-    afterOpenModal() {
-        // references are now sync'd and can be accessed.
-        //this.subtitle.style.color = '#f00';
-    }
-
-    closeModal() {
-        this.setState({modalIsOpen: false});
-    }
 
     render() {
         if(this.props.annoTask !== null){
-        let progress = Math.floor((this.props.annoTask.finished / this.props.annoTask.size) * 100)
+        // let progress = Math.floor((this.props.annoTask.finished / this.props.annoTask.size) * 100)
         return (
             <div ref={this.myref}>
                 <Row>
@@ -91,45 +82,27 @@ class WorkingOnSIA extends Component {
                                 <strong className='h4'>{this.props.annoTask.finished}/{this.props.annoTask.size}</strong>
                  </div>
                 </Col>
-                <Col xs='2' md='2' xl='2'>
+                {/* <Col xs='2' md='2' xl='2'>
                   <div className='callout callout-success'>
                                 <small className='text-muted'>Seconds/Annotation</small>
                                 <br/>
                                 <strong className='h4'>&#8709; {this.props.annoTask.statistic.secondsPerAnno}</strong>
                  </div>
-                </Col>
-                <Col xs='2' md='2' xl='2'>
+                </Col> */}
+                {/* <Col xs='2' md='2' xl='2'>
                     <Button color='primary' style={{marginTop: '25px'}} onClick={this.openModal}><i className="fa fa-question-circle"></i> Show Instructions</Button>
-                </Col>
+                </Col> */}
                 </Row>
-                <div className='clearfix'>
+                {/* <div className='clearfix'>
                     <div className='float-left'>
                         <strong>{progress}%</strong>
                     </div>
                     <div className='float-right'>
                         <small className='text-muted'>Started at: {this.props.annoTask.createdAt}</small>
                     </div>
-                </div>
-                <Progress className='progress-xs' color={getColor(progress)} value={progress}/>
+                </div> */}
+                {/* <Progress className='progress-xs' color={getColor(progress)} value={progress}/> */}
                 <br/>
-                <Modal
-                    isOpen={this.state.modalIsOpen}
-                    onAfterOpen={this.afterOpenModal}
-                    onRequestClose={this.closeModal}
-                    style={customStyles}
-                    ariaHideApp={false}
-                    contentLabel="Instructions"
-                    >
-                     <Card>
-                        <CardHeader><i className="fa fa-question-circle"></i> Instructions</CardHeader>
-                        <CardBody>
-                            <Alert color="info">
-                                {this.props.annoTask.instructions}
-                            </Alert>
-                            <Button color='success' onClick={this.closeModal}><i className="fa fa-times"></i> Close</Button>
-                        </CardBody>
-                    </Card>                   
-                </Modal>
             </div>
         )
     }else return(<React.Fragment><div>Loading...</div></React.Fragment>)

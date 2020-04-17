@@ -25,6 +25,7 @@ export default class Grid extends React.Component {
           colors={this.props.colors}
           static_data={this.props.static_data}
           xMargin={this.props.xMargin}
+          yMargin={this.props.yMargin}
           color={this.props.color}
           label={this.props.label}
           label_id={this.props.label_id}
@@ -67,6 +68,6 @@ export default class Grid extends React.Component {
   };
 
   render() {
-    return <React.Fragment>{this.renderRow()}</React.Fragment>;
+    return <div>{this.renderRow()}</div>;
   }
 }

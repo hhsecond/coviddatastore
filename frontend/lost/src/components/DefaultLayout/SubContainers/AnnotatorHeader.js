@@ -22,10 +22,10 @@ class DefaultHeader extends Component {
 
     return (
       <React.Fragment>
-        <AppNavbarBrand
+        {/* <AppNavbarBrand
           full={{ src: logo, width: 89, height: 25, alt: 'LOST Logo' }}
           minimized={{ src: sygnet, width: 30, height: 30, alt: 'LOST Logo' }}
-        />
+        /> */}
         {/* <Nav className='d-ml-down-none' navbar>
           <NavItem className='px-3'>
             <NavLink href='/'>Dashboard</NavLink>
