@@ -78,6 +78,14 @@ export default class Image extends React.Component {
     };
   }
 
+  componentDidMount(){
+    const x_max = 9
+    const x_min = 0
+    const y_max = 0
+    const y_min = 18
+    this.random_offset = {x:Math.round(Math.random() * (x_max - x_min)) + x_min, y: Math.round(Math.random() * (y_max - y_min)) + y_min}
+  }
+
   reset = func => {
     this.setState(
       {
@@ -384,7 +392,7 @@ export default class Image extends React.Component {
     // }
     return (
       <div style={{ backgroundColor: "grey" }}>
-        <div style={{textAlign:'center', color:'white'}}>{this.props.annos.image.url}</div>
+        <div style={{textAlign:'center', color:'white', marginBottom: 30}}>{this.props.annos.image.url}</div>
         <div
           style={{
             width: 1100,
@@ -417,6 +425,7 @@ export default class Image extends React.Component {
               {
                 <React.Fragment>
                   <Grid
+                    random_offset={this.random_offset}
                     colors={this.state.colors}
                     static_data={this.state.static_data}
                     xMargin={this.myRef.current.getBoundingClientRect()["x"]}
@@ -454,6 +463,7 @@ export default class Image extends React.Component {
               {
                 <React.Fragment>
                   <Grid
+                    random_offset={this.random_offset}
                     colors={this.state.colors}
                     static_data={this.state.static_data}
                     xMargin={this.myRef.current.getBoundingClientRect()["x"]}

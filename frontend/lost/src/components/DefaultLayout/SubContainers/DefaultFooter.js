@@ -14,9 +14,9 @@ class DefaultFooter extends Component {
 
     return (
         <div style={{margin: "auto", marginTop: 30, marginBottom: 30 }}>
-          <div style={{ fontSize: "large", textAlign:'center' }}>HANGER</div>
-          <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-between", width:150}}>
-            <div >{"Made with"}</div>
+          <div style={{ fontSize: "large", textAlign:'center' }}>A platform to collaboratively annotate covid19 dataset</div>
+          <div style={{ display: "flex", flexDirection: "row", justifyContent: "space-between", width:210, marginLeft: 110}}>
+            <div >Built with</div>
             <svg
               style={{ marginTop: 4 }}
               class="bi bi-heart-fill"
@@ -32,7 +32,7 @@ class DefaultFooter extends Component {
                 clip-rule="evenodd"
               />
             </svg>
-            <div> by hanger</div>
+            <div>. Powered by Hangar</div>
           </div>
         </div>
     );

@@ -54,20 +54,40 @@ export default class Grid extends React.Component {
     let _list = [];
     let i = 0;
     for (i = 0; i < _num-1; i++) {
-      _list.push(
-        <div
-          key={i.toString() + "_" + this.props.grid_number.toString()}
-          style={{}}
-          onMouseDown={() => {}}
-        >
-          {this.props.static_data.imageUrl?this.renderColumn(i, num_rows):null}
-        </div>
-      );
+      if(i===0){
+        let random_offset_y = 0
+        if(this.props.random_offset){
+          random_offset_y = this.props.random_offset.x
+        }
+        _list.push(
+          <div
+            key={i.toString() + "_" + this.props.grid_number.toString()}
+            // style={{marginTop:random_offset_y}}
+            onMouseDown={() => {}}
+          >
+            {this.props.static_data.imageUrl?this.renderColumn(i, num_rows):null}
+          </div>
+        );
+      }else{
+        _list.push(
+          <div
+            key={i.toString() + "_" + this.props.grid_number.toString()}
+            style={{}}
+            onMouseDown={() => {}}
+          >
+            {this.props.static_data.imageUrl?this.renderColumn(i, num_rows):null}
+          </div>
+        );
+      }
     }
     return _list;
   };
 
   render() {
-    return <div>{this.renderRow()}</div>;
+    let random_offset_x = 0
+    if(this.props.random_offset){
+      random_offset_x = this.props.random_offset.x
+    }
+    return <div >{this.renderRow()}</div>;
   }
 }
