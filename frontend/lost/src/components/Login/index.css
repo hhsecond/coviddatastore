@@ -45,3 +45,7 @@
   background-color: #f5a540;
   color: black;
 }
+
+.loginView{
+  background: rgba(0, 0, 0, 0.5);
+}

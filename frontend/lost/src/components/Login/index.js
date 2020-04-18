@@ -21,7 +21,6 @@ class Home extends Component {
           }}
         >
           <div
-            // className="flexBox"
             style={{
               display: "flex",
               flexDirection: "row",
@@ -50,30 +49,17 @@ class Home extends Component {
                 </Button>
               </div>
             </div>
-            <div style={{ flex: 0.5, width: 10 }}>
-              {/* <Form onChange={this.props.onChange} onSubmit={this.props.onSubmit}>
-                <Form.Group controlId="formBasicEmail">
-                  <Form.Label class="labelForm">Email address</Form.Label>
-                  <Form.Control placeholder="Enter email" />
-                  <Form.Text className="text-muted" />
-                </Form.Group>
-
-                <Form.Group controlId="formBasicPassword">
-                  <Form.Label class="labelForm">Password</Form.Label>
-                  <Form.Control type="password" placeholder="Password" />
-                </Form.Group>
-                <br />
-                <Button className="buttonForm" variant="primary" type="submit">
-                  Submit
-                </Button>
-              </Form> */}
-              {/* <form onSubmit={()=>{alert('kk')}}> */}
+            <div
+              style={{ flex: 0.5, width: 10, height: 350 }}
+              className="loginView"
+            >
+              <div style={{margin:'auto', width: 180, paddingTop: 60}}>
                 <div style={{ color: "white", fontSize: 20, marginBottom: 10 }}>
                   Username:{" "}
                 </div>
-                <div style={{marginBottom: 20}}>
+                <div style={{ marginBottom: 20 }}>
                   <input
-                    style={{height: 30, width: 180, fontSize: 15}}
+                    style={{ height: 30, fontSize: 15 }}
                     name="username"
                     type="text"
                     value={this.props.username}
@@ -83,20 +69,24 @@ class Home extends Component {
                 <div style={{ color: "white", fontSize: 20, marginBottom: 10 }}>
                   Password:{" "}
                 </div>
-                <div style={{marginBottom: 20}}>
-                <input
-                style={{height: 30, width: 180, fontSize: 15}}
-                  name="password"
-                  type="password"
-                  value={this.props.passsword}
-                  onChange={this.props.onChange}
-                />
+                <div style={{ marginBottom: 20 }}>
+                  <input
+                    style={{ height: 30, fontSize: 15 }}
+                    name="password"
+                    type="password"
+                    value={this.props.passsword}
+                    onChange={this.props.onChange}
+                  />
                 </div>
-                <Button onClick={this.props.onSubmit} className="buttonForm" variant="primary" type="submit">
+                <Button
+                  onClick={this.props.onSubmit}
+                  className="buttonForm"
+                  variant="primary"
+                  type="submit"
+                >
                   Submit
                 </Button>
-                {/* <input style={{backgroundColor:'#f5a540', width:90, height: 30}}  type="submit" value="Submit" /> */}
-              {/* </form> */}
+              </div>
             </div>
           </div>
         </div>
