@@ -31,7 +31,7 @@ class Home extends Component {
           >
             <div style={{ flex: 1 }}>
               <div className="col content">
-                <h1 className="title">Hangar</h1>
+                <h1 className="title">HangarHub</h1>
                 <p className="desc" style={{ fontSize: 25 }}>
                   A Version Control for Tensor Data. Commit, branch, merge,
                   revert, and collaborate in the data-defined software era.
