@@ -15,8 +15,8 @@ export default class Grid extends React.Component {
     }
   };
 
-  renderColumn = (num_columns, num_rows) => {
-    let _num = num_rows;
+  renderColumn = (num_columns, num_points) => {
+    let _num = num_points;
     let _list = [];
     let i = 0;
     for (i = 0; i < _num; i++) {
@@ -47,13 +47,13 @@ export default class Grid extends React.Component {
   };
 
   renderRow = () => {
-    let _num = Math.floor(this.props.imageDimentions.height / 20);
-    // let _num = 9
-    let num_rows = Math.floor(this.props.imageDimentions.width / 12) - 1;
-    // let num_rows = 2;
+    let num_rows = Math.floor(this.props.imageDimentions.height / 14.5);
+    // let num_rows = 9
+    let num_points = Math.floor(this.props.imageDimentions.width / 12)+2;
+    // let num_points = 2;
     let _list = [];
     let i = 0;
-    for (i = 0; i < _num-1; i++) {
+    for (i = 0; i < num_rows-1; i++) {
       if(i===0){
         let random_offset_y = 0
         if(this.props.random_offset){
@@ -61,21 +61,22 @@ export default class Grid extends React.Component {
         }
         _list.push(
           <div
+            style={{height:15}}
             key={i.toString() + "_" + this.props.grid_number.toString()}
             // style={{marginTop:random_offset_y}}
             onMouseDown={() => {}}
           >
-            {this.props.static_data.imageUrl?this.renderColumn(i, num_rows):null}
+            {this.props.static_data.imageUrl?this.renderColumn(i, num_points):null}
           </div>
         );
       }else{
         _list.push(
           <div
+            style={{height:15}}
             key={i.toString() + "_" + this.props.grid_number.toString()}
-            style={{}}
             onMouseDown={() => {}}
           >
-            {this.props.static_data.imageUrl?this.renderColumn(i, num_rows):null}
+            {this.props.static_data.imageUrl?this.renderColumn(i, num_points):null}
           </div>
         );
       }

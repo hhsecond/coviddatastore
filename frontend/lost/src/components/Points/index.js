@@ -33,8 +33,8 @@ export default class Point extends React.Component {
 
   isPresent(x, y, data){
     y = y+window.pageYOffset
-      for(let i=x-1.5; i<=x+1.5;i=i+0.5){
-        for(let j=y-1.5; j<=y+1.5;j=j+0.5){
+      for(let i=x-2; i<=x+2;i=i+0.5){
+        for(let j=y-2; j<=y+2;j=j+0.5){
           if(i in data && j in data[i]){
             return data[i][j]
           }
@@ -60,11 +60,11 @@ export default class Point extends React.Component {
       this.state.backgroundColor === "grey"
     ) {
       if (this.props.color) {
-        if(e.pageY<=(this.props.imageDimentions.height+yMargin)){
+        if(e.pageY<=(this.props.imageDimentions.height+yMargin) && e.pageX <= this.props.xMargin+this.props.imageDimentions.width){
           this.setStateWrapper({ backgroundColor: this.props.color });
           this.props.addToHoveredPoints(
-            e.pageX,
-            e.pageY-yMargin,
+            Math.round(e.pageX),
+            Math.round(e.pageY-yMargin),
             parseInt(this.row),
             parseInt(this.column),
             this.props.grid_number

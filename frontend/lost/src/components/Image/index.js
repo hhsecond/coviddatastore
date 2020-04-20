@@ -3,7 +3,7 @@ import axios from "axios";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
-import {Redirect} from 'react-router-dom'
+import { Redirect } from "react-router-dom";
 
 import { API_URL } from "../../settings";
 
@@ -58,6 +58,8 @@ export default class Image extends React.Component {
       boxDimention: { width: null, height: null },
       modalShow: false,
       posting: false,
+      xOffset: 0,
+      yOffset: 0,
 
       history_row_columns: [[], []],
       history_coordinates: [[], []],
@@ -65,11 +67,11 @@ export default class Image extends React.Component {
 
       rows_columns_data: {},
       coordinates_data: {},
-      static_data:{
-        'imageUrl':null,
-        'data':{}
+      static_data: {
+        imageUrl: null,
+        data: {}
       },
-      colors:{},
+      colors: {},
       // final_data: [],
 
       points_to_label_mapping: [{}, {}],
@@ -78,12 +80,12 @@ export default class Image extends React.Component {
     };
   }
 
-  componentDidMount(){
-    const x_max = 9
-    const x_min = 0
-    const y_max = 0
-    const y_min = 18
-    this.random_offset = {x:Math.round(Math.random() * (x_max - x_min)) + x_min, y: Math.round(Math.random() * (y_max - y_min)) + y_min}
+  componentDidMount() {
+    this.random_offset = {
+      x: this.props.imageId%10,
+      y: this.props.imageId%6+5
+    };
+    this.setState({ xOffset: this.random_offset.x, yOffset: this.random_offset.y*-1});
   }
 
   reset = func => {
@@ -94,9 +96,9 @@ export default class Image extends React.Component {
         rows_columns_data: {},
         coordinates_data: {},
         redirect: false,
-        static_data:{
-          'imageUrl':null,
-          'data':{}
+        static_data: {
+          imageUrl: null,
+          data: {}
         },
         // final_data: [],
         points_to_label_mapping: [{}, {}],
@@ -117,44 +119,47 @@ export default class Image extends React.Component {
     });
   };
 
-  componentDidUpdate = () => {
-    if(this.state.static_data.imageUrl!=this.props.imageUrl){
-      let data = {}
-      if(this.props.annos.annotations.polygons.length){
-        for(let i of this.props.annos.annotations.polygons){
-          
-          for(let j of i.data){
-            if(j.x in data){
-            }else{
-              data[j.x]={}
+  componentDidUpdate = (prevProps, prevState) => {
+    
+
+
+    if (this.state.static_data.imageUrl != this.props.imageUrl) {
+      let data = {};
+      if (this.props.annos.annotations.polygons.length) {
+        for (let i of this.props.annos.annotations.polygons) {
+          for (let j of i.data) {
+            if (j.x in data) {
+            } else {
+              data[j.x] = {};
             }
-            data[j.x][j.y]=i.labelIds[0]
+            data[j.x][j.y] = i.labelIds[0];
           }
         }
       }
-      let _colors={}
-      if(Object.keys(this.state.colors).length == 0){
-        if(Object.keys(colors).length == 0){
+      let _colors = {};
+      if (Object.keys(this.state.colors).length == 0) {
+        if (Object.keys(colors).length == 0) {
           // if (value.label in colors) {
           // } else {
           //   colors[value.id] = this.props.colors[index];
           // }
-          if(this.props.labels.length){
-            for(let i of this.props.labels){
+          if (this.props.labels.length) {
+            for (let i of this.props.labels) {
               // console.log("@@@@@@@labels", i)
             }
           }
-        }else{
-          _colors=colors
+        } else {
+          _colors = colors;
         }
       }
 
-
       this.setState({
-        static_data:{
-        imageUrl:this.props.imageUrl,
-        data:data}
-        ,colors:_colors})
+        static_data: {
+          imageUrl: this.props.imageUrl,
+          data: data
+        },
+        colors: _colors
+      });
     }
   };
 
@@ -274,9 +279,9 @@ export default class Image extends React.Component {
 
   addToHoveredPoints = (x, y, row, column, grid_number) => {
     // if(y > this.state.imageDimentions.height){}else{
-      x = x - this.myRef.current.getBoundingClientRect().left;
-      hovered_points[grid_number].push([row, column]);
-      hovered_coordinates[grid_number].push([x, y]);
+    x = x - this.myRef.current.getBoundingClientRect().left;
+    hovered_points[grid_number].push([row, column]);
+    hovered_coordinates[grid_number].push([x, y]);
     // }
   };
 
@@ -284,73 +289,77 @@ export default class Image extends React.Component {
     this.setState({ modalShow: value });
   };
 
-
-  renderNextButton = () =>{
-    if(this.state.redirect){
-      return(<Redirect to='/dashboard'/>)
+  renderNextButton = () => {
+    if (this.state.redirect) {
+      return <Redirect to="/dashboard" />;
     }
-    if(this.props.annos.image.isLast){
-      return(<Button
-        type="button"
-        variant="danger"
-        onClick={() => {
-          this.setState({redirect:true})
-        }}
-      >
-        Finish
-      </Button>)
-      //   
-    }else{
-      return(<Button
-        type="button"
-        disabled={this.state.posting}
-        onClick={() => {
-          if (hovered_points[0].length || hovered_points[1].length) {
-            alert("unsaved data");
-          } else {
-            // this.reset(this.props.nextImage);
-            if(Object.keys(this.state.coordinates_data).length !== 0){
-              this.postAnnotationAsync().then(data => {
-                this.setState({ posting: false }, () => {
-                  this.reset(this.props.nextImage);
+    if (this.props.annos.image.isLast) {
+      return (
+        <Button
+          type="button"
+          variant="danger"
+          onClick={() => {
+            this.setState({ redirect: true });
+          }}
+        >
+          Finish
+        </Button>
+      );
+      //
+    } else {
+      return (
+        <Button
+          type="button"
+          disabled={this.state.posting}
+          onClick={() => {
+            if (hovered_points[0].length || hovered_points[1].length) {
+              alert("unsaved data");
+            } else {
+              // this.reset(this.props.nextImage);
+              if (Object.keys(this.state.coordinates_data).length !== 0) {
+                this.postAnnotationAsync().then(data => {
+                  this.setState({ posting: false }, () => {
+                    this.reset(this.props.nextImage);
+                  });
                 });
-              });
-            }else{
-              this.reset(this.props.nextImage);
+              } else {
+                this.reset(this.props.nextImage);
+              }
             }
-          }
-        }}
-      >
-        {this.state.posting ? (
-          <Spinner
-            as="span"
-            animation="border"
-            size="sm"
-            role="status"
-            aria-hidden="true"
-          />
-        ) : (
-          "Next Image"
-        )}
-      </Button>)
+          }}
+        >
+          {this.state.posting ? (
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+            />
+          ) : (
+            "Next Image"
+          )}
+        </Button>
+      );
     }
-  }
-
+  };
 
   postAnnotationAsync = () => {
     let payload;
     let data = [];
-    let label_data = {}
+    let label_data = {};
     for (let key in this.state.coordinates_data) {
-      label_data = {'labelIds': [key],
-                  'mode': 'view',
-                  'status': 'new',
-                  'type': 'polygon',
-                  'data':[]}
-      for (let co of this.state.coordinates_data[key]){
-        label_data['data'].push({"x":co[0], "y":co[1]})
+      label_data = {
+        labelIds: [key],
+        mode: "view",
+        status: "new",
+        type: "polygon",
+        data: []
+      };
+      for (let co of this.state.coordinates_data[key]) {
+        label_data["data"].push({ x: co[0], y: co[1] });
       }
-      data.push(label_data)
+      data.push(label_data);
     }
     payload = {
       imgId: this.props.imageId,
@@ -367,10 +376,7 @@ export default class Image extends React.Component {
     this.setState({ posting: true });
 
     return axios
-      .post(
-        API_URL + "/sia/update",
-        payload
-      )
+      .post(API_URL + "/sia/update", payload)
       .then(response => {
         return response;
       })
@@ -392,7 +398,9 @@ export default class Image extends React.Component {
     // }
     return (
       <div style={{ backgroundColor: "grey" }}>
-        <div style={{textAlign:'center', color:'white', marginBottom: 30}}>{this.props.annos.image.url}</div>
+        <div style={{ textAlign: "center", color: "white", marginBottom: 30 }}>
+          {this.props.annos.image.url}
+        </div>
         <div
           style={{
             width: 1100,
@@ -412,7 +420,7 @@ export default class Image extends React.Component {
             className="image"
             draggable="false"
           />
-          {this.state.imageLoaded ? (
+          {/* {this.state.imageLoaded ? (
             <div
               onMouseDown={e => {
                 this.setStateWrapper({ is_mousedown: true });
@@ -448,9 +456,53 @@ export default class Image extends React.Component {
                 </React.Fragment>
               }
             </div>
-          ) : null}
+          ) : null} */}
 
-          {this.state.imageLoaded ? (
+          <div
+            onMouseDown={e => {
+              this.setStateWrapper({ is_mousedown: true });
+            }}
+            onMouseUp={e => {
+              this.setStateWrapper({ is_mousedown: false });
+            }}
+            style={{
+              position: "absolute",
+              top: 0,
+              marginTop: this.state.yOffset,
+              left: this.state.xOffset,
+              width: 1120
+            }}
+          >
+            <Grid
+              random_offset={this.random_offset}
+              colors={this.state.colors}
+              static_data={this.state.static_data}
+              xMargin={
+                this.myRef.current
+                  ? this.myRef.current.getBoundingClientRect()["x"]
+                  : null
+              }
+              yMargin={
+                this.myRef.current
+                  ? this.myRef.current.getBoundingClientRect()["y"]
+                  : null
+              }
+              color={this.state.color}
+              label={this.state.value.label}
+              label_id={this.state.value.id}
+              image_url={this.props.imageUrl}
+              key={"0grid"}
+              grid_number={0}
+              points_to_label_mapping={this.state.points_to_label_mapping[0]}
+              removeHoveredPoints={this.removeHoveredPoints}
+              rows_columns_data={this.state.rows_columns_data}
+              addToHoveredPoints={this.addToHoveredPoints}
+              imageDimentions={this.state.imageDimentions}
+              is_mousedown={this.state.is_mousedown}
+            />
+          </div>
+
+          {/* {this.state.imageLoaded ? (
             <div
               onMouseDown={e => {
                 this.setStateWrapper({ is_mousedown: true });
@@ -486,7 +538,53 @@ export default class Image extends React.Component {
                 </React.Fragment>
               }
             </div>
-          ) : null}
+          ) : null} */}
+
+          <div
+            onMouseDown={e => {
+              this.setStateWrapper({ is_mousedown: true });
+            }}
+            onMouseUp={e => {
+              this.setStateWrapper({ is_mousedown: false });
+            }}
+            style={{
+              position: "absolute",
+              top: 7.5,
+              marginTop: this.state.yOffset,
+              left: this.state.xOffset+6,
+              width: 1120
+            }}
+          >
+            <Grid
+              random_offset={this.random_offset}
+              colors={this.state.colors}
+              static_data={this.state.static_data}
+              xMargin={
+                this.myRef.current
+                  ? this.myRef.current.getBoundingClientRect()["x"]
+                  : null
+              }
+              yMargin={
+                this.myRef.current
+                  ? this.myRef.current.getBoundingClientRect()["y"]
+                  : null
+              }
+              color={this.state.color}
+              label={this.state.value.label}
+              label_id={this.state.value.id}
+              image_url={this.props.imageUrl}
+              key={"0grid"}
+              grid_number={0}
+              points_to_label_mapping={this.state.points_to_label_mapping[0]}
+              removeHoveredPoints={this.removeHoveredPoints}
+              rows_columns_data={this.state.rows_columns_data}
+              addToHoveredPoints={this.addToHoveredPoints}
+              imageDimentions={this.state.imageDimentions}
+              is_mousedown={this.state.is_mousedown}
+            />
+          </div>
+
+
         </div>
         {this.state.imageLoaded ? (
           <div
@@ -576,7 +674,6 @@ export default class Image extends React.Component {
               </div>
             </div>
             {this.renderNextButton()}
-            
           </div>
         ) : null}
       </div>
