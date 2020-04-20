@@ -82,10 +82,13 @@ export default class Image extends React.Component {
 
   componentDidMount() {
     this.random_offset = {
-      x: this.props.imageId%10,
-      y: this.props.imageId%6+5
+      x: this.props.imageId % 10,
+      y: (this.props.imageId % 6) + 5
     };
-    this.setState({ xOffset: this.random_offset.x, yOffset: this.random_offset.y*-1});
+    this.setState({
+      xOffset: this.random_offset.x,
+      yOffset: this.random_offset.y * -1
+    });
   }
 
   reset = func => {
@@ -120,9 +123,6 @@ export default class Image extends React.Component {
   };
 
   componentDidUpdate = (prevProps, prevState) => {
-    
-
-
     if (this.state.static_data.imageUrl != this.props.imageUrl) {
       let data = {};
       if (this.props.annos.annotations.polygons.length) {
@@ -181,7 +181,8 @@ export default class Image extends React.Component {
     temp2 = { [_label]: hovered_coordinates[1] };
     _history_coordinates[0].push(temp1);
     _history_coordinates[1].push(temp2);
-    this.setState({ history_coordinates: _history_coordinates });
+    return _history_coordinates;
+    // this.setState({ history_coordinates: _history_coordinates });
   };
 
   addAnnotiation = () => {
@@ -200,10 +201,12 @@ export default class Image extends React.Component {
         ...hovered_coordinates[1]
       ];
     }
-    this.setState({
-      rows_columns_data: _rows_columns_data,
-      coordinates_data: _coordinates_data
-    });
+    // this.setState({
+    //   rows_columns_data: _rows_columns_data,
+    //   coordinates_data: _coordinates_data
+    // });
+
+    return [_rows_columns_data, _coordinates_data];
 
     // let _final_data = this.state.final_data;
     // for (let i of hovered_coordinates[0]) {
@@ -257,22 +260,41 @@ export default class Image extends React.Component {
       }
       ii++;
     }
-    this.setState({
-      points_to_label_mapping: _points_to_label_mapping
-    });
+    // this.setState({
+    //   points_to_label_mapping: _points_to_label_mapping
+    // });
+
+    return _points_to_label_mapping;
   };
 
   // called when label is submitted
   handleSubmit = () => {
     if (hovered_points[0].length || hovered_points[1].length) {
-      this.changeHistory();
-      this.addAnnotiation();
-      this.changePointsLabels();
+      let changeHistoryData = this.changeHistory();
+      let addAnnotiationData = this.addAnnotiation();
+      let changePointsLabelsData = this.changePointsLabels();
 
       //resetting the hovered data after
       hovered_points = [[], []];
       hovered_coordinates = [[], []];
-    } else {
+
+      // this.setState({
+      //   history_coordinates: changeHistoryData,
+      //   rows_columns_data: addAnnotiationData[0],
+      //   coordinates_data: addAnnotiationData[1],
+      //   points_to_label_mapping: changePointsLabelsData
+      // });
+      return new Promise(resolve => {
+        this.setState(
+          {
+            history_coordinates: changeHistoryData,
+            rows_columns_data: addAnnotiationData[0],
+            coordinates_data: addAnnotiationData[1],
+            points_to_label_mapping: changePointsLabelsData
+          },
+          resolve
+        );
+      });
     }
     // this.setState({ label: null });
   };
@@ -287,6 +309,19 @@ export default class Image extends React.Component {
 
   setModalShow = value => {
     this.setState({ modalShow: value });
+  };
+
+  onClickNextButton = async imageProp => {
+    await this.handleSubmit();
+    if (Object.keys(this.state.coordinates_data).length !== 0) {
+      this.postAnnotationAsync().then(data => {
+        this.setState({ posting: false }, () => {
+          this.reset(this.props.nextImage);
+        });
+      });
+    } else {
+      this.reset(this.props.nextImage);
+    }
   };
 
   renderNextButton = () => {
@@ -312,20 +347,7 @@ export default class Image extends React.Component {
           type="button"
           disabled={this.state.posting}
           onClick={() => {
-            if (hovered_points[0].length || hovered_points[1].length) {
-              alert("unsaved data");
-            } else {
-              // this.reset(this.props.nextImage);
-              if (Object.keys(this.state.coordinates_data).length !== 0) {
-                this.postAnnotationAsync().then(data => {
-                  this.setState({ posting: false }, () => {
-                    this.reset(this.props.nextImage);
-                  });
-                });
-              } else {
-                this.reset(this.props.nextImage);
-              }
-            }
+            this.onClickNextButton();
           }}
         >
           {this.state.posting ? (
@@ -386,16 +408,34 @@ export default class Image extends React.Component {
     // return axios.get(API_URL + '/sia/label').then((response)=>{return response}).catch(e=> {return e} )
   };
 
+  renderPrevButton = () => {
+    return (
+      <Button
+        type="button"
+        disabled={this.state.posting}
+        onClick={() => {
+          if (hovered_points[0].length || hovered_points[1].length) {
+            alert("unsaved data");
+          } else {
+            this.reset(this.props.prevImage);
+            // this.props.
+          }
+        }}
+      >
+        Previous Image
+      </Button>
+    );
+  };
+
+  onChangeOfLabel = async (value, index) => {
+    await this.handleSubmit();
+    this.setState({
+      value: { label: value.label, id: value.id },
+      color: this.props.colors[index]
+    });
+  };
+
   render() {
-    // console.log(
-    //   "!!!!static_data",
-    //   this.props.annos
-    // );
-    // if(this.myRef.current){
-    //   console.log(this.myRef.current.getBoundingClientRect()["y"])
-    // }else{
-    //   console.log(this.myRef.current)
-    // }
     return (
       <div style={{ backgroundColor: "grey" }}>
         <div style={{ textAlign: "center", color: "white", marginBottom: 30 }}>
@@ -551,7 +591,7 @@ export default class Image extends React.Component {
               position: "absolute",
               top: 7.5,
               marginTop: this.state.yOffset,
-              left: this.state.xOffset+6,
+              left: this.state.xOffset + 6,
               width: 1120
             }}
           >
@@ -573,9 +613,9 @@ export default class Image extends React.Component {
               label={this.state.value.label}
               label_id={this.state.value.id}
               image_url={this.props.imageUrl}
-              key={"0grid"}
-              grid_number={0}
-              points_to_label_mapping={this.state.points_to_label_mapping[0]}
+              key={"1grid"}
+              grid_number={1}
+              points_to_label_mapping={this.state.points_to_label_mapping[1]}
               removeHoveredPoints={this.removeHoveredPoints}
               rows_columns_data={this.state.rows_columns_data}
               addToHoveredPoints={this.addToHoveredPoints}
@@ -583,28 +623,13 @@ export default class Image extends React.Component {
               is_mousedown={this.state.is_mousedown}
             />
           </div>
-
-
         </div>
         {this.state.imageLoaded ? (
           <div
             style={{ marginTop: 10, marginBottom: 20 }}
             className="center-screen"
           >
-            <Button
-              type="button"
-              disabled={this.state.posting}
-              onClick={() => {
-                if (hovered_points[0].length || hovered_points[1].length) {
-                  alert("unsaved data");
-                } else {
-                  this.reset(this.props.prevImage);
-                  // this.props.
-                }
-              }}
-            >
-              Previous Image
-            </Button>
+            {this.renderPrevButton()}
 
             <div>
               <div style={{ marginBottom: 5, textDecoration: "underline" }}>
@@ -628,11 +653,7 @@ export default class Image extends React.Component {
                           checked={value.label === this.state.value.label}
                           name="colors"
                           onChange={e => {
-                            this.handleSubmit();
-                            this.setState({
-                              value: { label: value.label, id: value.id },
-                              color: this.props.colors[index]
-                            });
+                            this.onChangeOfLabel(value, index);
                           }}
                         />
                         <div style={{ marginLeft: 10 }}>{value.label}</div>
@@ -648,15 +669,6 @@ export default class Image extends React.Component {
                     );
                   })
                 : null}
-              <Button
-                style={{ marginTop: 10 }}
-                type="button"
-                onClick={() => {
-                  this.handleSubmit();
-                }}
-              >
-                SAVE
-              </Button>
 
               <div style={{ marginTop: 20, marginBottom: 20 }}>
                 <Button
