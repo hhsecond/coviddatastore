@@ -47,9 +47,11 @@ export default class Grid extends React.Component {
   };
 
   renderRow = () => {
-    let num_rows = Math.floor(this.props.imageDimentions.height / 14.5);
+    // let num_rows = Math.floor(this.props.imageDimentions.height / 14.5);
+    let num_rows = Math.floor(this.props.imageDimentions.height / 21);
     // let num_rows = 9
-    let num_points = Math.floor(this.props.imageDimentions.width / 12)+2;
+    // let num_points = Math.floor(this.props.imageDimentions.width / 12)+2;
+    let num_points = Math.floor(this.props.imageDimentions.width / 23)+1;
     // let num_points = 2;
     let _list = [];
     let i = 0;
@@ -61,7 +63,7 @@ export default class Grid extends React.Component {
         }
         _list.push(
           <div
-            style={{height:15}}
+            style={{height:22}}
             key={i.toString() + "_" + this.props.grid_number.toString()}
             // style={{marginTop:random_offset_y}}
             onMouseDown={() => {}}
@@ -72,7 +74,7 @@ export default class Grid extends React.Component {
       }else{
         _list.push(
           <div
-            style={{height:15}}
+            style={{height:22}}
             key={i.toString() + "_" + this.props.grid_number.toString()}
             onMouseDown={() => {}}
           >

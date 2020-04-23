@@ -33,8 +33,8 @@ export default class Point extends React.Component {
 
   isPresent(x, y, data){
     y = y+window.pageYOffset
-      for(let i=x-2; i<=x+2;i=i+0.5){
-        for(let j=y-2; j<=y+2;j=j+0.5){
+      for(let i=x-3; i<=x+3;i=i+0.5){
+        for(let j=y-3; j<=y+3;j=j+0.5){
           if(i in data && j in data[i]){
             return data[i][j]
           }
@@ -54,6 +54,7 @@ export default class Point extends React.Component {
 
   onHover = e => {
     const yMargin = this.props.yMargin+window.pageYOffset
+    console.log("!!!!!!!!!!!!!!", e.pageY, yMargin, this.props.yMargin, window.pageYOffset, e.pageY-yMargin)
     if (
       this.props.is_mousedown &&
       this.state.label === null &&
