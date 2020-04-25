@@ -24,7 +24,7 @@
 .overlay {
   position: absolute;
   top: 0;
-  left: 0;
+  /* left: 20; */
   opacity: 1;
   transition: .5s ease;
 }
