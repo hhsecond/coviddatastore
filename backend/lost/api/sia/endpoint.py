@@ -41,6 +41,8 @@ def get_repo(identity):
                               variable_shape=True, shape=(200, 2))
         co.commit('Added columns')
         co.close()
+        # branch = 'branch' + str(identity)
+        # repo.create_branch(branch)
     else:
         if repo.writer_lock_held:
             repo.force_release_writer_lock()
@@ -161,7 +163,7 @@ class Update(Resource):
                     x, y = coordinate['x'], coordinate['y']
                     polygon_coordinates.append([x, y])
                 label = each_polygon['labelIds'][0]
-                all_polygon[label] = np.array(polygon_coordinates)
+                all_polygon[label] = np.array(polygon_coordinates, dtype=np.float64)
             ann[data['imgId']] = all_polygon
             try:
                 co.commit('added annotation')
