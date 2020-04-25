@@ -22,6 +22,11 @@ export default class Grid extends React.Component {
     for (i = 0; i < _num; i++) {
       _list.push(
         <Point
+          xOffsetAddition={this.props.xOffsetAddition}
+          yOffsetAddition={this.props.yOffsetAddition}
+          xOffset={this.props.xOffset}
+          yOffset={this.props.yOffset}
+          imageRef={this.props.imageRef}
           colors={this.props.colors}
           static_data={this.props.static_data}
           xMargin={this.props.xMargin}
@@ -47,50 +52,27 @@ export default class Grid extends React.Component {
   };
 
   renderRow = () => {
-    // let num_rows = Math.floor(this.props.imageDimentions.height / 14.5);
     let num_rows = Math.floor(this.props.imageDimentions.height / 21);
-    // let num_rows = 9
-    // let num_points = Math.floor(this.props.imageDimentions.width / 12)+2;
-    let num_points = Math.floor(this.props.imageDimentions.width / 23)+1;
-    // let num_points = 2;
+    let num_points = Math.floor(this.props.imageDimentions.width / 23) + 1;
     let _list = [];
     let i = 0;
-    for (i = 0; i < num_rows-1; i++) {
-      if(i===0){
-        let random_offset_y = 0
-        if(this.props.random_offset){
-          random_offset_y = this.props.random_offset.x
-        }
-        _list.push(
-          <div
-            style={{height:22}}
-            key={i.toString() + "_" + this.props.grid_number.toString()}
-            // style={{marginTop:random_offset_y}}
-            onMouseDown={() => {}}
-          >
-            {this.props.static_data.imageUrl?this.renderColumn(i, num_points):null}
-          </div>
-        );
-      }else{
-        _list.push(
-          <div
-            style={{height:22}}
-            key={i.toString() + "_" + this.props.grid_number.toString()}
-            onMouseDown={() => {}}
-          >
-            {this.props.static_data.imageUrl?this.renderColumn(i, num_points):null}
-          </div>
-        );
-      }
+    for (i = 0; i < num_rows - 1; i++) {
+      _list.push(
+        <div
+          style={{ height: 22 }}
+          key={i.toString() + "_" + this.props.grid_number.toString()}
+          onMouseDown={() => {}}
+        >
+          {this.props.static_data.imageUrl
+            ? this.renderColumn(i, num_points)
+            : null}
+        </div>
+      );
     }
     return _list;
   };
 
   render() {
-    let random_offset_x = 0
-    if(this.props.random_offset){
-      random_offset_x = this.props.random_offset.x
-    }
-    return <div >{this.renderRow()}</div>;
+    return <div>{this.renderRow()}</div>;
   }
 }

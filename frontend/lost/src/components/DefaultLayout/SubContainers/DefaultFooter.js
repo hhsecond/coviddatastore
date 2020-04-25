@@ -32,7 +32,8 @@ class DefaultFooter extends Component {
                 clip-rule="evenodd"
               />
             </svg>
-            <div>. Powered by Hangar</div>
+            <div>. Powered by</div>
+            <a href="https://hangar-py.readthedocs.io/en/latest/index.html">Hangar</a>
           </div>
         </div>
     );

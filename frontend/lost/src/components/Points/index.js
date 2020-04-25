@@ -31,45 +31,78 @@ export default class Point extends React.Component {
     }
   };
 
-  isPresent(x, y, data){
-    y = y+window.pageYOffset
-      for(let i=x-3; i<=x+3;i=i+0.5){
-        for(let j=y-3; j<=y+3;j=j+0.5){
-          if(i in data && j in data[i]){
-            return data[i][j]
-          }
-        }
-      }
+  componentDidMount() {
+    let xCoordinate = this.getXCoordinate(
+      this.props.row,
+      this.props.column,
+      this.props.xOffset + this.props.xOffsetAddition,
+      this.myRef.current.getBoundingClientRect()["width"]
+    );
+    let yCoordinate = this.getYCoordinate(
+      this.props.row,
+      this.props.column,
+      this.props.yOffset + 11 + this.props.yOffsetAddition,
+      this.myRef.current.getBoundingClientRect()["height"]
+    );
+    if(xCoordinate in this.props.static_data.data && yCoordinate in this.props.static_data.data[xCoordinate]){
+      this.setState({ backgroundColor: this.props.colors[this.props.static_data.data[xCoordinate][yCoordinate]] });
+    }
+    
   }
 
-  componentDidMount(){
-    const yMargin = this.props.yMargin+window.pageYOffset
-    let xx = this.myRef.current.getBoundingClientRect();
-    let data = this.props.static_data.data
-    let isPresent = this.isPresent(xx.x-this.props.xMargin, xx.y-yMargin, data)
-    if(isPresent){
-      this.setState({backgroundColor:this.props.colors[isPresent]})
+  getXCoordinate = (row, column, xOffset, width) => {
+    let xCoordinate = null;
+    if (column > 0) {
+      xCoordinate = xOffset + width + (column - 1) * (20 + width) + 20;
+    } else {
+      xCoordinate = xOffset;
     }
-  }
+    return xCoordinate + 2;
+  };
+
+  getYCoordinate = (row, column, yOffset, height) => {
+    let yCoordinate = null;
+    if (row > 0) {
+      yCoordinate = yOffset + row * 22;
+    } else {
+      yCoordinate = yOffset;
+    }
+
+    return yCoordinate + 2;
+  };
 
   onHover = e => {
-    const yMargin = this.props.yMargin+window.pageYOffset
-    console.log("!!!!!!!!!!!!!!", e.pageY, yMargin, this.props.yMargin, window.pageYOffset, e.pageY-yMargin)
+    let xCoordinate = this.getXCoordinate(
+      this.props.row,
+      this.props.column,
+      this.props.xOffset + this.props.xOffsetAddition,
+      this.myRef.current.getBoundingClientRect()["width"]
+    );
+    let yCoordinate = this.getYCoordinate(
+      this.props.row,
+      this.props.column,
+      this.props.yOffset + 11 + this.props.yOffsetAddition,
+      this.myRef.current.getBoundingClientRect()["height"]
+    );
     if (
       this.props.is_mousedown &&
       this.state.label === null &&
       this.state.backgroundColor === "grey"
     ) {
       if (this.props.color) {
-        if(e.pageY<=(this.props.imageDimentions.height+yMargin) && e.pageX <= this.props.xMargin+this.props.imageDimentions.width){
+        if (
+          yCoordinate <= this.props.imageDimentions.height &&
+          xCoordinate <= this.props.imageDimentions.width
+        ) {
           this.setStateWrapper({ backgroundColor: this.props.color });
           this.props.addToHoveredPoints(
-            Math.round(e.pageX),
-            Math.round(e.pageY-yMargin),
+            Math.round(xCoordinate),
+            Math.round(yCoordinate),
             parseInt(this.row),
             parseInt(this.column),
             this.props.grid_number
-        );}
+          );
+        }
       }
     }
   };
