@@ -11,7 +11,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import ImageComponent from "../Image";
 import "./style.css";
 
-let colors = ["#00cc44", "#996633", "#ff3300", "#0099ff", "#ff00ff", "#ffff00"];
+let colors = ["#00cc44", "#996633", "#ff3300", "#0099ff", "#ff00ff", "#ffff00", "#336600", "#ff6600"];
 
 const {
   siaLayoutUpdate,

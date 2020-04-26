@@ -192,11 +192,6 @@ export default class Image extends React.Component {
         ...hovered_coordinates[1]
       ];
     }
-    // this.setState({
-    //   rows_columns_data: _rows_columns_data,
-    //   coordinates_data: _coordinates_data
-    // });
-
     return [_rows_columns_data, _coordinates_data];
   };
 
@@ -227,9 +222,6 @@ export default class Image extends React.Component {
       }
       ii++;
     }
-    // this.setState({
-    //   points_to_label_mapping: _points_to_label_mapping
-    // });
 
     return _points_to_label_mapping;
   };
@@ -237,7 +229,7 @@ export default class Image extends React.Component {
   // called when label is submitted
   handleSubmit = () => {
     if (hovered_points[0].length || hovered_points[1].length) {
-      let changeHistoryData = this.changeHistory();
+      // let changeHistoryData = this.changeHistory();
       let addAnnotiationData = this.addAnnotiation();
       let changePointsLabelsData = this.changePointsLabels();
 
@@ -245,17 +237,11 @@ export default class Image extends React.Component {
       hovered_points = [[], []];
       hovered_coordinates = [[], []];
 
-      // this.setState({
-      //   history_coordinates: changeHistoryData,
-      //   rows_columns_data: addAnnotiationData[0],
-      //   coordinates_data: addAnnotiationData[1],
-      //   points_to_label_mapping: changePointsLabelsData
-      // });
       return new Promise(resolve => {
         this.setState(
           {
-            history_coordinates: changeHistoryData,
-            rows_columns_data: addAnnotiationData[0],
+            // history_coordinates: changeHistoryData,
+            // rows_columns_data: addAnnotiationData[0],
             coordinates_data: addAnnotiationData[1],
             points_to_label_mapping: changePointsLabelsData
           },
@@ -263,12 +249,35 @@ export default class Image extends React.Component {
         );
       });
     }
-    // this.setState({ label: null });
   };
 
   addToHoveredPoints = (x, y, row, column, grid_number) => {
     hovered_points[grid_number].push([row, column]);
     hovered_coordinates[grid_number].push([x, y]);
+  };
+
+  removedFromHoveredPoints = (x, y, row, column, grid_number) => {
+    let _coordinates_data = this.state.coordinates_data;
+    let _points_to_label_mapping = this.state.points_to_label_mapping;
+    for (let key in _coordinates_data) {
+      let _index = _coordinates_data[key].findIndex(
+        element => element[0] == x && element[1] == y
+      );
+      if (_index >= 0) {
+        _coordinates_data[key].splice(_index, 1);
+      }
+    }
+
+    if (
+      row in _points_to_label_mapping[grid_number] &&
+      column in _points_to_label_mapping[grid_number][row]
+    ) {
+      delete _points_to_label_mapping[grid_number][row][column];
+    }
+    this.setState({
+      coordinates_data: _coordinates_data,
+      points_to_label_mapping: _points_to_label_mapping
+    });
   };
 
   setModalShow = value => {
@@ -412,15 +421,33 @@ export default class Image extends React.Component {
 
   onChangeOfLabel = async (value, index) => {
     await this.handleSubmit();
-    this.setState({
-      value: { label: value.label, id: value.id },
-      color: this.props.colors[index]
-    });
+    if (value.label == "erase") {
+      this.setState({
+        value: { label: value.label, id: value.id },
+        color: "grey"
+      });
+    } else {
+      this.setState({
+        value: { label: value.label, id: value.id },
+        color: this.props.colors[index]
+      });
+    }
   };
 
   renderLabels = () => {
     return (
       <React.Fragment>
+        <div className="input-screen-erase">
+          <input
+            type="radio"
+            checked={this.state.value.label === "erase"}
+            name="colors"
+            onChange={e => {
+              this.onChangeOfLabel({ label: "erase", id: -1 }, -1);
+            }}
+          />
+          <div style={{marginLeft: 20}}>{"Erase annotated points"}</div>
+        </div>
         {this.props.labels.map((value, index) => {
           if (value.label in colors) {
           } else {
@@ -521,6 +548,7 @@ export default class Image extends React.Component {
             removeHoveredPoints={this.removeHoveredPoints}
             rows_columns_data={this.state.rows_columns_data}
             addToHoveredPoints={this.addToHoveredPoints}
+            removedFromHoveredPoints={this.removedFromHoveredPoints}
             imageDimentions={this.state.imageDimentions}
             is_mousedown={this.state.is_mousedown}
           />
@@ -570,6 +598,7 @@ export default class Image extends React.Component {
             removeHoveredPoints={this.removeHoveredPoints}
             rows_columns_data={this.state.rows_columns_data}
             addToHoveredPoints={this.addToHoveredPoints}
+            removedFromHoveredPoints={this.removedFromHoveredPoints}
             imageDimentions={this.state.imageDimentions}
             is_mousedown={this.state.is_mousedown}
           />
@@ -591,7 +620,7 @@ export default class Image extends React.Component {
       >
         <div>
           <div style={{ marginBottom: 5, textDecoration: "underline" }}>
-            Select a label
+            <b>Select a label</b>
           </div>
           {this.props.labels.length ? this.renderLabels() : null}
 
@@ -608,6 +637,15 @@ export default class Image extends React.Component {
               show={this.state.modalShow}
               onHide={() => this.setModalShow(false)}
             />
+          </div>
+          <div style={{ marginTop: 20, marginBottom: 20 }}>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={() => this.reset(()=>{})}
+            >
+              Delete Unsaved Annotations
+            </Button>
           </div>
         </div>
       </div>
@@ -631,7 +669,7 @@ export default class Image extends React.Component {
             marginRight: 20
           }}
         >
-          <diiv style={{ marginTop: 30 }}>{this.renderPrevButton()}</diiv>
+          <div style={{ marginTop: 30 }}>{this.renderPrevButton()}</div>
           <div style={{ flex: 0.5 }}>{this.renderControls()}</div>
           <div style={{ flex: 2.5 }}>
             {this.state.xOffset == 0 || this.state.yOffset == 0

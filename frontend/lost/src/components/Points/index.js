@@ -17,16 +17,11 @@ export default class Point extends React.Component {
     this.setState(key_value_dict);
   };
 
-  componentDidUpdate = () => {
-    if (this.props.label_data) {
-      if (
-        this.state.label === null &&
-        this.props.label_data["label_id"] !== null
-      ) {
-        this.setState({
-          label: this.props.label_data["label_id"],
-          backgroundColor: this.props.label_data[["colors"]]
-        });
+  componentDidUpdate = (prevProps, prevState) => {
+    if (prevProps.label_data) {
+      if (this.props.label_data) {
+      } else {
+        this.setState({ backgroundColor: "grey" });
       }
     }
   };
@@ -44,10 +39,16 @@ export default class Point extends React.Component {
       this.props.yOffset + 11 + this.props.yOffsetAddition,
       this.myRef.current.getBoundingClientRect()["height"]
     );
-    if(xCoordinate in this.props.static_data.data && yCoordinate in this.props.static_data.data[xCoordinate]){
-      this.setState({ backgroundColor: this.props.colors[this.props.static_data.data[xCoordinate][yCoordinate]] });
+    if (
+      xCoordinate in this.props.static_data.data &&
+      yCoordinate in this.props.static_data.data[xCoordinate]
+    ) {
+      this.setState({
+        backgroundColor: this.props.colors[
+          this.props.static_data.data[xCoordinate][yCoordinate]
+        ]
+      });
     }
-    
   }
 
   getXCoordinate = (row, column, xOffset, width) => {
@@ -72,36 +73,56 @@ export default class Point extends React.Component {
   };
 
   onHover = e => {
-    let xCoordinate = this.getXCoordinate(
-      this.props.row,
-      this.props.column,
-      this.props.xOffset + this.props.xOffsetAddition,
-      this.myRef.current.getBoundingClientRect()["width"]
-    );
-    let yCoordinate = this.getYCoordinate(
-      this.props.row,
-      this.props.column,
-      this.props.yOffset + 11 + this.props.yOffsetAddition,
-      this.myRef.current.getBoundingClientRect()["height"]
-    );
-    if (
-      this.props.is_mousedown &&
-      this.state.label === null &&
-      this.state.backgroundColor === "grey"
-    ) {
-      if (this.props.color) {
+    if (this.props.is_mousedown) {
+      let xCoordinate = this.getXCoordinate(
+        this.props.row,
+        this.props.column,
+        this.props.xOffset + this.props.xOffsetAddition,
+        this.myRef.current.getBoundingClientRect()["width"]
+      );
+      let yCoordinate = this.getYCoordinate(
+        this.props.row,
+        this.props.column,
+        this.props.yOffset + 11 + this.props.yOffsetAddition,
+        this.myRef.current.getBoundingClientRect()["height"]
+      );
+      if (this.props.color == "grey") {
+        if (this.state.backgroundColor !== "grey") {
+          if (
+            xCoordinate in this.props.static_data.data &&
+            yCoordinate in this.props.static_data.data[xCoordinate]
+          ) {
+          } else {
+            this.props.removedFromHoveredPoints(
+              Math.round(xCoordinate),
+              Math.round(yCoordinate),
+              parseInt(this.row),
+              parseInt(this.column),
+              this.props.grid_number
+            );
+            //reset
+          }
+        }
+      } else {
         if (
-          yCoordinate <= this.props.imageDimentions.height &&
-          xCoordinate <= this.props.imageDimentions.width
+          this.state.label === null &&
+          this.state.backgroundColor === "grey"
         ) {
-          this.setStateWrapper({ backgroundColor: this.props.color });
-          this.props.addToHoveredPoints(
-            Math.round(xCoordinate),
-            Math.round(yCoordinate),
-            parseInt(this.row),
-            parseInt(this.column),
-            this.props.grid_number
-          );
+          if (this.props.color) {
+            if (
+              yCoordinate <= this.props.imageDimentions.height &&
+              xCoordinate <= this.props.imageDimentions.width
+            ) {
+              this.setStateWrapper({ backgroundColor: this.props.color });
+              this.props.addToHoveredPoints(
+                Math.round(xCoordinate),
+                Math.round(yCoordinate),
+                parseInt(this.row),
+                parseInt(this.column),
+                this.props.grid_number
+              );
+            }
+          }
         }
       }
     }

@@ -45,6 +45,7 @@ export default class Grid extends React.Component {
           addToHoveredPoints={this.props.addToHoveredPoints}
           is_mousedown={this.props.is_mousedown}
           imageDimentions={this.props.imageDimentions}
+          removedFromHoveredPoints={this.props.removedFromHoveredPoints}
         />
       );
     }
