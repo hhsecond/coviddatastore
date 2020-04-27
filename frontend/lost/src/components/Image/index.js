@@ -15,7 +15,7 @@ let label_id_to_label = {};
 let hovered_points = [[], []];
 let hovered_coordinates = [[], []];
 let xOffsetAddition = 11;
-let yOffsetAddition = 11;
+let yOffsetAddition = 15;
 
 function InstructionModal(props) {
   return (
@@ -82,6 +82,7 @@ export default class Image extends React.Component {
 
   componentDidMount() {
     this.random_offset = {
+      // removing addition of 1 will be breaking change 
       x: (this.props.imageId % 9) + 1,
       y: (this.props.imageId % 6) + 5
     };

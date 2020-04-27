@@ -52,24 +52,19 @@ export default class Point extends React.Component {
   }
 
   getXCoordinate = (row, column, xOffset, width) => {
-    let xCoordinate = null;
     if (column > 0) {
-      xCoordinate = xOffset + width + (column - 1) * (20 + width) + 20;
+      return xOffset + width + (column - 1) * (14 + width) + 14 + width/2;
     } else {
-      xCoordinate = xOffset;
+      return xOffset + width/2;
     }
-    return xCoordinate + 2;
   };
 
   getYCoordinate = (row, column, yOffset, height) => {
-    let yCoordinate = null;
     if (row > 0) {
-      yCoordinate = yOffset + row * 22;
+      return yOffset + height + (row - 1) * (20 + height)+ 20 + height/2;
     } else {
-      yCoordinate = yOffset;
+      return yOffset + height/2;
     }
-
-    return yCoordinate + 2;
   };
 
   onHover = e => {
@@ -94,8 +89,8 @@ export default class Point extends React.Component {
           ) {
           } else {
             this.props.removedFromHoveredPoints(
-              Math.round(xCoordinate),
-              Math.round(yCoordinate),
+              xCoordinate,
+              yCoordinate,
               parseInt(this.row),
               parseInt(this.column),
               this.props.grid_number
@@ -115,8 +110,8 @@ export default class Point extends React.Component {
             ) {
               this.setStateWrapper({ backgroundColor: this.props.color });
               this.props.addToHoveredPoints(
-                Math.round(xCoordinate),
-                Math.round(yCoordinate),
+                xCoordinate,
+                yCoordinate,
                 parseInt(this.row),
                 parseInt(this.column),
                 this.props.grid_number
@@ -131,10 +126,22 @@ export default class Point extends React.Component {
   render() {
     return (
       <span
+        className="span"
         ref={this.myRef}
-        style={{ backgroundColor: this.state.backgroundColor }}
         onMouseOver={this.onHover}
-      />
+      >
+        <div style={{display:'flex', flexDirection:'row', flexWrap: 'wrap'}}>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{backgroundColor: this.state.backgroundColor, width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+        </div>
+      </span>
     );
   }
 }

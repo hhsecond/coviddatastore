@@ -53,14 +53,15 @@ export default class Grid extends React.Component {
   };
 
   renderRow = () => {
-    let num_rows = Math.floor(this.props.imageDimentions.height / 21);
-    let num_points = Math.floor(this.props.imageDimentions.width / 23) + 1;
+    let num_rows = this.props.imageDimentions.height? Math.floor((this.props.imageDimentions.height-(this.props.yOffset + 11 + this.props.yOffsetAddition+9))/(9+20)): -2;
+    num_rows = num_rows + 2
+    let num_points = Math.floor((1120-(this.props.xOffset + this.props.xOffsetAddition+9))/(9+14))
     let _list = [];
     let i = 0;
     for (i = 0; i < num_rows - 1; i++) {
       _list.push(
         <div
-          style={{ height: 22 }}
+          style={{ height: 29 }}
           key={i.toString() + "_" + this.props.grid_number.toString()}
           onMouseDown={() => {}}
         >
