@@ -9,12 +9,13 @@ import { API_URL } from "../../settings";
 
 import "./index.css";
 import Grid from "../Grid";
-import { state } from "l3p-frontend";
 
 let colors = {};
 let label_id_to_label = {};
 let hovered_points = [[], []];
 let hovered_coordinates = [[], []];
+let xOffsetAddition = 11;
+let yOffsetAddition = 15;
 
 function InstructionModal(props) {
   return (
@@ -33,9 +34,12 @@ function InstructionModal(props) {
         <ol>
           <li>Select a label from radio button below</li>
           <li>Click and hover over the points on image to annotate</li>
-          <li>Label can be chnaged</li>
-          <li>Click on next image to save annotation</li>
+          <li>Label can be changed as desired</li>
+          <li>
+            Click on next image or previous image button to save annotation
+          </li>
         </ol>
+        - Arrow keys can be used to navigate over image when zoomed in.
       </Modal.Body>
       <Modal.Footer>
         <Button onClick={props.onHide}>Close</Button>
@@ -78,7 +82,8 @@ export default class Image extends React.Component {
 
   componentDidMount() {
     this.random_offset = {
-      x: this.props.imageId % 10,
+      // removing addition of 1 will be breaking change 
+      x: (this.props.imageId % 9) + 1,
       y: (this.props.imageId % 6) + 5
     };
     this.setState({
@@ -135,15 +140,6 @@ export default class Image extends React.Component {
       let _colors = {};
       if (Object.keys(this.state.colors).length == 0) {
         if (Object.keys(colors).length == 0) {
-          // if (value.label in colors) {
-          // } else {
-          //   colors[value.id] = this.props.colors[index];
-          // }
-          if (this.props.labels.length) {
-            for (let i of this.props.labels) {
-              // console.log("@@@@@@@labels", i)
-            }
-          }
         } else {
           _colors = colors;
         }
@@ -197,11 +193,6 @@ export default class Image extends React.Component {
         ...hovered_coordinates[1]
       ];
     }
-    // this.setState({
-    //   rows_columns_data: _rows_columns_data,
-    //   coordinates_data: _coordinates_data
-    // });
-
     return [_rows_columns_data, _coordinates_data];
   };
 
@@ -232,9 +223,6 @@ export default class Image extends React.Component {
       }
       ii++;
     }
-    // this.setState({
-    //   points_to_label_mapping: _points_to_label_mapping
-    // });
 
     return _points_to_label_mapping;
   };
@@ -242,7 +230,7 @@ export default class Image extends React.Component {
   // called when label is submitted
   handleSubmit = () => {
     if (hovered_points[0].length || hovered_points[1].length) {
-      let changeHistoryData = this.changeHistory();
+      // let changeHistoryData = this.changeHistory();
       let addAnnotiationData = this.addAnnotiation();
       let changePointsLabelsData = this.changePointsLabels();
 
@@ -250,17 +238,11 @@ export default class Image extends React.Component {
       hovered_points = [[], []];
       hovered_coordinates = [[], []];
 
-      // this.setState({
-      //   history_coordinates: changeHistoryData,
-      //   rows_columns_data: addAnnotiationData[0],
-      //   coordinates_data: addAnnotiationData[1],
-      //   points_to_label_mapping: changePointsLabelsData
-      // });
       return new Promise(resolve => {
         this.setState(
           {
-            history_coordinates: changeHistoryData,
-            rows_columns_data: addAnnotiationData[0],
+            // history_coordinates: changeHistoryData,
+            // rows_columns_data: addAnnotiationData[0],
             coordinates_data: addAnnotiationData[1],
             points_to_label_mapping: changePointsLabelsData
           },
@@ -268,15 +250,35 @@ export default class Image extends React.Component {
         );
       });
     }
-    // this.setState({ label: null });
   };
 
   addToHoveredPoints = (x, y, row, column, grid_number) => {
-    // if(y > this.state.imageDimentions.height){}else{
-    x = x - this.myRef.current.getBoundingClientRect().left;
     hovered_points[grid_number].push([row, column]);
     hovered_coordinates[grid_number].push([x, y]);
-    // }
+  };
+
+  removedFromHoveredPoints = (x, y, row, column, grid_number) => {
+    let _coordinates_data = this.state.coordinates_data;
+    let _points_to_label_mapping = this.state.points_to_label_mapping;
+    for (let key in _coordinates_data) {
+      let _index = _coordinates_data[key].findIndex(
+        element => element[0] == x && element[1] == y
+      );
+      if (_index >= 0) {
+        _coordinates_data[key].splice(_index, 1);
+      }
+    }
+
+    if (
+      row in _points_to_label_mapping[grid_number] &&
+      column in _points_to_label_mapping[grid_number][row]
+    ) {
+      delete _points_to_label_mapping[grid_number][row][column];
+    }
+    this.setState({
+      coordinates_data: _coordinates_data,
+      points_to_label_mapping: _points_to_label_mapping
+    });
   };
 
   setModalShow = value => {
@@ -295,7 +297,6 @@ export default class Image extends React.Component {
       this.reset(this.props.nextImage);
     }
   };
-
 
   onClickFinishButton = async imageProp => {
     await this.handleSubmit();
@@ -318,7 +319,7 @@ export default class Image extends React.Component {
           type="button"
           variant="danger"
           onClick={() => {
-            this.onClickFinishButton()
+            this.onClickFinishButton();
           }}
         >
           Finish
@@ -398,12 +399,7 @@ export default class Image extends React.Component {
         type="button"
         disabled={this.state.posting}
         onClick={() => {
-          if (hovered_points[0].length || hovered_points[1].length) {
-            alert("unsaved data");
-          } else {
-            this.reset(this.props.prevImage);
-            // this.props.
-          }
+          this.onClickPrevButton();
         }}
       >
         Previous Image
@@ -411,17 +407,48 @@ export default class Image extends React.Component {
     );
   };
 
+  onClickPrevButton = async imageProp => {
+    await this.handleSubmit();
+    if (Object.keys(this.state.coordinates_data).length !== 0) {
+      this.postAnnotationAsync().then(data => {
+        this.setState({ posting: false }, () => {
+          this.reset(this.props.prevImage);
+        });
+      });
+    } else {
+      this.reset(this.props.prevImage);
+    }
+  };
+
   onChangeOfLabel = async (value, index) => {
     await this.handleSubmit();
-    this.setState({
-      value: { label: value.label, id: value.id },
-      color: this.props.colors[index]
-    });
+    if (value.label == "erase") {
+      this.setState({
+        value: { label: value.label, id: value.id },
+        color: "grey"
+      });
+    } else {
+      this.setState({
+        value: { label: value.label, id: value.id },
+        color: this.props.colors[index]
+      });
+    }
   };
 
   renderLabels = () => {
     return (
       <React.Fragment>
+        <div className="input-screen-erase">
+          <input
+            type="radio"
+            checked={this.state.value.label === "erase"}
+            name="colors"
+            onChange={e => {
+              this.onChangeOfLabel({ label: "erase", id: -1 }, -1);
+            }}
+          />
+          <div style={{marginLeft: 20}}>{"Erase annotated points"}</div>
+        </div>
         {this.props.labels.map((value, index) => {
           if (value.label in colors) {
           } else {
@@ -458,185 +485,201 @@ export default class Image extends React.Component {
     );
   };
 
-  render() {
+  renderImage = () => {
     return (
-      <div style={{ backgroundColor: "grey", overflow:'auto' }}>
+      <div
+        id="imageComponent"
+        style={{
+          width: 1100,
+          margin: "auto",
+          position: "relative"
+        }}
+        className="selectDisable"
+      >
+        <img
+          ref={this.myRef}
+          alt="annotation display"
+          onLoad={this.onImgLoad}
+          src={this.props.imageUrl}
+          className="image"
+          draggable="false"
+        />
+
+        <div
+          onMouseDown={e => {
+            this.setStateWrapper({ is_mousedown: true });
+          }}
+          onMouseUp={e => {
+            this.setStateWrapper({ is_mousedown: false });
+          }}
+          style={{
+            position: "absolute",
+            top: 0,
+            marginTop: this.state.yOffset,
+            left: this.state.xOffset,
+            width: 1120
+          }}
+        >
+          <Grid
+            xOffsetAddition={0}
+            yOffsetAddition={0}
+            xOffset={this.state.xOffset}
+            yOffset={this.state.yOffset}
+            random_offset={this.random_offset}
+            colors={this.state.colors}
+            static_data={this.state.static_data}
+            imageRef={this.myRef}
+            xMargin={
+              this.myRef.current
+                ? this.myRef.current.getBoundingClientRect()["x"]
+                : null
+            }
+            yMargin={
+              this.myRef.current
+                ? this.myRef.current.getBoundingClientRect()["y"]
+                : null
+            }
+            color={this.state.color}
+            label={this.state.value.label}
+            label_id={this.state.value.id}
+            image_url={this.props.imageUrl}
+            key={"0grid"}
+            grid_number={0}
+            points_to_label_mapping={this.state.points_to_label_mapping[0]}
+            removeHoveredPoints={this.removeHoveredPoints}
+            rows_columns_data={this.state.rows_columns_data}
+            addToHoveredPoints={this.addToHoveredPoints}
+            removedFromHoveredPoints={this.removedFromHoveredPoints}
+            imageDimentions={this.state.imageDimentions}
+            is_mousedown={this.state.is_mousedown}
+          />
+        </div>
+
+        <div
+          onMouseDown={e => {
+            this.setStateWrapper({ is_mousedown: true });
+          }}
+          onMouseUp={e => {
+            this.setStateWrapper({ is_mousedown: false });
+          }}
+          style={{
+            position: "absolute",
+            top: yOffsetAddition,
+            marginTop: this.state.yOffset,
+            left: this.state.xOffset + xOffsetAddition,
+            width: 1120
+          }}
+        >
+          <Grid
+            xOffsetAddition={xOffsetAddition}
+            yOffsetAddition={yOffsetAddition}
+            xOffset={this.state.xOffset}
+            yOffset={this.state.yOffset}
+            random_offset={this.random_offset}
+            colors={this.state.colors}
+            static_data={this.state.static_data}
+            imageRef={this.myRef}
+            xMargin={
+              this.myRef.current
+                ? this.myRef.current.getBoundingClientRect()["x"]
+                : null
+            }
+            yMargin={
+              this.myRef.current
+                ? this.myRef.current.getBoundingClientRect()["y"]
+                : null
+            }
+            color={this.state.color}
+            label={this.state.value.label}
+            label_id={this.state.value.id}
+            image_url={this.props.imageUrl}
+            key={"1grid"}
+            grid_number={1}
+            points_to_label_mapping={this.state.points_to_label_mapping[1]}
+            removeHoveredPoints={this.removeHoveredPoints}
+            rows_columns_data={this.state.rows_columns_data}
+            addToHoveredPoints={this.addToHoveredPoints}
+            removedFromHoveredPoints={this.removedFromHoveredPoints}
+            imageDimentions={this.state.imageDimentions}
+            is_mousedown={this.state.is_mousedown}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  renderControls = () => {
+    return (
+      <div
+        style={{
+          // marginTop: 10,
+          // borderStyle: "solid",
+          // borderColor: "red",
+          justifyContent: "space-around"
+        }}
+        className="center-screen"
+      >
+        <div>
+          <div style={{ marginBottom: 5, textDecoration: "underline" }}>
+            <b>Select a label</b>
+          </div>
+          {this.props.labels.length ? this.renderLabels() : null}
+
+          <div style={{ marginTop: 20, marginBottom: 20 }}>
+            <Button
+              variant="warning"
+              type="button"
+              onClick={() => this.setModalShow(true)}
+            >
+              Instructions
+            </Button>
+
+            <InstructionModal
+              show={this.state.modalShow}
+              onHide={() => this.setModalShow(false)}
+            />
+          </div>
+          <div style={{ marginTop: 20, marginBottom: 20 }}>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={() => this.reset(()=>{})}
+            >
+              Delete Unsaved Annotations
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  render() {
+    if (document.getElementById("imageComponent")) {
+      document.getElementById("imageComponent").style.cursor = "crosshair";
+    }
+    return (
+      <div style={{ backgroundColor: "grey", overflow: "auto" }} id="container">
         <div style={{ textAlign: "center", color: "white", marginBottom: 30 }}>
           {this.props.annos.image.url}
         </div>
-        {/* {this.state.imageLoaded ? ( */}
-          <div
-            style={{ marginTop: 10 }}
-            className="center-screen"
-          >
-            {this.renderPrevButton()}
-
-            <div>
-              <div style={{ marginBottom: 5, textDecoration: "underline" }}>
-                Select a label
-              </div>
-              {/* <div style={{height: 120, overflow: 'auto', width:200, borderStyle:'solid', borderColor:'green'}}> */}
-                {this.props.labels.length ? this.renderLabels() : null}
-              {/* </div> */}
-
-              <div style={{ marginTop: 20, marginBottom: 20 }}>
-                <Button
-                  variant="warning"
-                  type="button"
-                  onClick={() => this.setModalShow(true)}
-                >
-                  Instructions
-                </Button>
-
-                <InstructionModal
-                  show={this.state.modalShow}
-                  onHide={() => this.setModalShow(false)}
-                />
-              </div>
-            </div>
-            {this.renderNextButton()}
-          </div>
-        {/* ) : null} */}
         <div
           style={{
-            width: 1100,
-            margin: "auto",
-            position: "relative"
-            // borderStyle: "solid",
-            // borderColor: "grey",
-            // borderWidth: 15,
+            display: "flex",
+            flexDirection: "row",
+            marginLeft: 20,
+            marginRight: 20
           }}
-          className="selectDisable"
         >
-          <img
-            ref={this.myRef}
-            alt="annotation display"
-            onLoad={this.onImgLoad}
-            src={this.props.imageUrl}
-            className="image"
-            draggable="false"
-          />
-
-          <div
-            onMouseDown={e => {
-              this.setStateWrapper({ is_mousedown: true });
-            }}
-            onMouseUp={e => {
-              this.setStateWrapper({ is_mousedown: false });
-            }}
-            style={{
-              position: "absolute",
-              top: 0,
-              marginTop: this.state.yOffset,
-              left: this.state.xOffset,
-              width: 1120
-            }}
-          >
-            <Grid
-              random_offset={this.random_offset}
-              colors={this.state.colors}
-              static_data={this.state.static_data}
-              xMargin={
-                this.myRef.current
-                  ? this.myRef.current.getBoundingClientRect()["x"]
-                  : null
-              }
-              yMargin={
-                this.myRef.current
-                  ? this.myRef.current.getBoundingClientRect()["y"]
-                  : null
-              }
-              color={this.state.color}
-              label={this.state.value.label}
-              label_id={this.state.value.id}
-              image_url={this.props.imageUrl}
-              key={"0grid"}
-              grid_number={0}
-              points_to_label_mapping={this.state.points_to_label_mapping[0]}
-              removeHoveredPoints={this.removeHoveredPoints}
-              rows_columns_data={this.state.rows_columns_data}
-              addToHoveredPoints={this.addToHoveredPoints}
-              imageDimentions={this.state.imageDimentions}
-              is_mousedown={this.state.is_mousedown}
-            />
+          <div style={{ marginTop: 30 }}>{this.renderPrevButton()}</div>
+          <div style={{ flex: 0.5 }}>{this.renderControls()}</div>
+          <div style={{ flex: 2.5 }}>
+            {this.state.xOffset == 0 || this.state.yOffset == 0
+              ? null
+              : this.renderImage()}
           </div>
-
-          <div
-            onMouseDown={e => {
-              this.setStateWrapper({ is_mousedown: true });
-            }}
-            onMouseUp={e => {
-              this.setStateWrapper({ is_mousedown: false });
-            }}
-            style={{
-              position: "absolute",
-              top: 11,
-              marginTop: this.state.yOffset,
-              left: this.state.xOffset + 11,
-              width: 1120
-            }}
-          >
-            <Grid
-              random_offset={this.random_offset}
-              colors={this.state.colors}
-              static_data={this.state.static_data}
-              xMargin={
-                this.myRef.current
-                  ? this.myRef.current.getBoundingClientRect()["x"]
-                  : null
-              }
-              yMargin={
-                this.myRef.current
-                  ? this.myRef.current.getBoundingClientRect()["y"]
-                  : null
-              }
-              color={this.state.color}
-              label={this.state.value.label}
-              label_id={this.state.value.id}
-              image_url={this.props.imageUrl}
-              key={"1grid"}
-              grid_number={1}
-              points_to_label_mapping={this.state.points_to_label_mapping[1]}
-              removeHoveredPoints={this.removeHoveredPoints}
-              rows_columns_data={this.state.rows_columns_data}
-              addToHoveredPoints={this.addToHoveredPoints}
-              imageDimentions={this.state.imageDimentions}
-              is_mousedown={this.state.is_mousedown}
-            />
-          </div>
+          <div style={{ marginTop: 30 }}>{this.renderNextButton()}</div>
         </div>
-        <div style={{marginBottom: 30, height: 30}}></div>
-        {/* {this.state.imageLoaded ? (
-          <div
-            style={{ marginTop: 10, marginBottom: 20 }}
-            className="center-screen"
-          >
-            {this.renderPrevButton()}
-
-            <div>
-              <div style={{ marginBottom: 5, textDecoration: "underline" }}>
-                Select a label
-              </div>
-              {this.props.labels.length ? this.renderLabels() : null}
-
-              <div style={{ marginTop: 20, marginBottom: 20 }}>
-                <Button
-                  variant="warning"
-                  type="button"
-                  onClick={() => this.setModalShow(true)}
-                >
-                  Instructions
-                </Button>
-
-                <InstructionModal
-                  show={this.state.modalShow}
-                  onHide={() => this.setModalShow(false)}
-                />
-              </div>
-            </div>
-            {this.renderNextButton()}
-          </div>
-        ) : null} */}
+        <div style={{ marginBottom: 30, height: 30 }} />
       </div>
     );
   }

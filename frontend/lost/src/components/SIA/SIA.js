@@ -9,10 +9,9 @@ import { createHashHistory } from "history";
 import "react-notifications/lib/notifications.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 import ImageComponent from "../Image";
+import "./style.css";
 
-
-let colors = ['#00cc44', '#996633', '#ff3300', '#0099ff', '#ff00ff', '#ffff00']
-
+let colors = ["#00cc44", "#996633", "#ff3300", "#0099ff", "#ff00ff", "#ffff00", "#336600", "#ff6600"];
 
 const {
   siaLayoutUpdate,
@@ -83,7 +82,7 @@ class SIA extends Component {
         this.props.siaImgIsJunk(false);
         // this.props.siaUpdateAnnos(newAnnos).then(r => {
         //   console.log("SIA REQUEST: Updated Annos", r);
-          this.props.getSiaAnnos(this.props.getNextImage);
+        this.props.getSiaAnnos(this.props.getNextImage);
         // });
       }
     }
@@ -99,7 +98,7 @@ class SIA extends Component {
         });
         this.props.siaImgIsJunk(false);
         // this.props.siaUpdateAnnos(newAnnos).then(() => {
-          this.props.getSiaAnnos(this.props.getPrevImage, "prev");
+        this.props.getSiaAnnos(this.props.getPrevImage, "prev");
         // });
       }
     }
@@ -125,9 +124,6 @@ class SIA extends Component {
     }
   }
 
-
-
-
   requestImageFromBackend() {
     this.props.getSiaImage(this.props.annos.image.url).then(response => {
       this.setState({
@@ -141,8 +137,6 @@ class SIA extends Component {
     this.props.getWorkingOnAnnoTask();
   }
 
-
-
   render() {
     return (
       <div>
@@ -153,14 +147,18 @@ class SIA extends Component {
             annos={this.props.annos}
             imageUrl={this.state.image.data}
             imageId={this.state.image.id}
-            prevImage={()=>{
-              this.props.siaGetPrevImage(this.state.image.id)
+            prevImage={() => {
+              this.props.siaGetPrevImage(this.state.image.id);
             }}
-            nextImage={()=>{
-              this.props.siaGetNextImage(this.state.image.id)
+            nextImage={() => {
+              this.props.siaGetNextImage(this.state.image.id);
             }}
           />
-        ) : null}
+        ) : (
+          <div className="loader-parent" style={{ marginTop: 270 }}>
+            <div className="loader"></div>
+          </div>
+        )}
       </div>
     );
   }

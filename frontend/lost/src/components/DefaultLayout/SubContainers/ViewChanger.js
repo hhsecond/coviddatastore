@@ -35,7 +35,7 @@ class ViewChanger extends Component {
                         <NavItem active={this.isActive('Designer')} className='px-3'>
                             <NavLink onClick={() => this.handleClick('Designer')} href='#'>Designer</NavLink>
                         </NavItem>
-                        <NavItem active={this.isActive('Annotator')} className='px-3'>
+                        <NavItem active={this.isActive('Annotator')} style={{marginTop: -2}} className='px-3'>
                             <NavLink onClick={() => this.handleClick('Annotator')} href='#'>Dashboard</NavLink>
                         </NavItem>
                     </React.Fragment>
@@ -43,7 +43,7 @@ class ViewChanger extends Component {
             } else {
                 return (
                     <React.Fragment>
-                        <NavItem active={this.isActive('Annotator')} className='px-3'>
+                        <NavItem active={this.isActive('Annotator')} style={{marginTop: -2}} className='px-3'>
                             <NavLink onClick={() => this.handleClick('Annotator')} href='#'>Dashboard</NavLink>
                         </NavItem>
                     </React.Fragment>

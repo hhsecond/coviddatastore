@@ -17,59 +17,108 @@ export default class Point extends React.Component {
     this.setState(key_value_dict);
   };
 
-  componentDidUpdate = () => {
-    if (this.props.label_data) {
-      if (
-        this.state.label === null &&
-        this.props.label_data["label_id"] !== null
-      ) {
-        this.setState({
-          label: this.props.label_data["label_id"],
-          backgroundColor: this.props.label_data[["colors"]]
-        });
+  componentDidUpdate = (prevProps, prevState) => {
+    if (prevProps.label_data) {
+      if (this.props.label_data) {
+      } else {
+        this.setState({ backgroundColor: "grey" });
       }
     }
   };
 
-  isPresent(x, y, data){
-    y = y+window.pageYOffset
-      for(let i=x-3; i<=x+3;i=i+0.5){
-        for(let j=y-3; j<=y+3;j=j+0.5){
-          if(i in data && j in data[i]){
-            return data[i][j]
-          }
-        }
-      }
-  }
-
-  componentDidMount(){
-    const yMargin = this.props.yMargin+window.pageYOffset
-    let xx = this.myRef.current.getBoundingClientRect();
-    let data = this.props.static_data.data
-    let isPresent = this.isPresent(xx.x-this.props.xMargin, xx.y-yMargin, data)
-    if(isPresent){
-      this.setState({backgroundColor:this.props.colors[isPresent]})
+  componentDidMount() {
+    let xCoordinate = this.getXCoordinate(
+      this.props.row,
+      this.props.column,
+      this.props.xOffset + this.props.xOffsetAddition,
+      this.myRef.current.getBoundingClientRect()["width"]
+    );
+    let yCoordinate = this.getYCoordinate(
+      this.props.row,
+      this.props.column,
+      this.props.yOffset + 11 + this.props.yOffsetAddition,
+      this.myRef.current.getBoundingClientRect()["height"]
+    );
+    if (
+      xCoordinate in this.props.static_data.data &&
+      yCoordinate in this.props.static_data.data[xCoordinate]
+    ) {
+      this.setState({
+        backgroundColor: this.props.colors[
+          this.props.static_data.data[xCoordinate][yCoordinate]
+        ]
+      });
     }
   }
 
+  getXCoordinate = (row, column, xOffset, width) => {
+    if (column > 0) {
+      return xOffset + width + (column - 1) * (14 + width) + 14 + width/2;
+    } else {
+      return xOffset + width/2;
+    }
+  };
+
+  getYCoordinate = (row, column, yOffset, height) => {
+    if (row > 0) {
+      return yOffset + height + (row - 1) * (20 + height)+ 20 + height/2;
+    } else {
+      return yOffset + height/2;
+    }
+  };
+
   onHover = e => {
-    const yMargin = this.props.yMargin+window.pageYOffset
-    console.log("!!!!!!!!!!!!!!", e.pageY, yMargin, this.props.yMargin, window.pageYOffset, e.pageY-yMargin)
-    if (
-      this.props.is_mousedown &&
-      this.state.label === null &&
-      this.state.backgroundColor === "grey"
-    ) {
-      if (this.props.color) {
-        if(e.pageY<=(this.props.imageDimentions.height+yMargin) && e.pageX <= this.props.xMargin+this.props.imageDimentions.width){
-          this.setStateWrapper({ backgroundColor: this.props.color });
-          this.props.addToHoveredPoints(
-            Math.round(e.pageX),
-            Math.round(e.pageY-yMargin),
-            parseInt(this.row),
-            parseInt(this.column),
-            this.props.grid_number
-        );}
+    if (this.props.is_mousedown) {
+      let xCoordinate = this.getXCoordinate(
+        this.props.row,
+        this.props.column,
+        this.props.xOffset + this.props.xOffsetAddition,
+        this.myRef.current.getBoundingClientRect()["width"]
+      );
+      let yCoordinate = this.getYCoordinate(
+        this.props.row,
+        this.props.column,
+        this.props.yOffset + 11 + this.props.yOffsetAddition,
+        this.myRef.current.getBoundingClientRect()["height"]
+      );
+      if (this.props.color == "grey") {
+        if (this.state.backgroundColor !== "grey") {
+          if (
+            xCoordinate in this.props.static_data.data &&
+            yCoordinate in this.props.static_data.data[xCoordinate]
+          ) {
+          } else {
+            this.props.removedFromHoveredPoints(
+              xCoordinate,
+              yCoordinate,
+              parseInt(this.row),
+              parseInt(this.column),
+              this.props.grid_number
+            );
+            //reset
+          }
+        }
+      } else {
+        if (
+          this.state.label === null &&
+          this.state.backgroundColor === "grey"
+        ) {
+          if (this.props.color) {
+            if (
+              yCoordinate <= this.props.imageDimentions.height &&
+              xCoordinate <= this.props.imageDimentions.width
+            ) {
+              this.setStateWrapper({ backgroundColor: this.props.color });
+              this.props.addToHoveredPoints(
+                xCoordinate,
+                yCoordinate,
+                parseInt(this.row),
+                parseInt(this.column),
+                this.props.grid_number
+              );
+            }
+          }
+        }
       }
     }
   };
@@ -77,10 +126,22 @@ export default class Point extends React.Component {
   render() {
     return (
       <span
+        className="span"
         ref={this.myRef}
-        style={{ backgroundColor: this.state.backgroundColor }}
         onMouseOver={this.onHover}
-      />
+      >
+        <div style={{display:'flex', flexDirection:'row', flexWrap: 'wrap'}}>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{backgroundColor: this.state.backgroundColor, width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+          <div style={{ width:3, height:3}}></div>
+        </div>
+      </span>
     );
   }
 }
