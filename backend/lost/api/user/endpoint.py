@@ -1,4 +1,5 @@
 import datetime
+from collections import defaultdict
 from flask_restplus import Resource
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, jwt_refresh_token_required, get_jwt_identity, get_raw_jwt
 from lost.api.api import api
@@ -6,7 +7,7 @@ from lost.api.user.api_definition import user, user_list, user_login
 from lost.api.user.parsers import login_parser, create_user_parser, update_user_parser
 from lost.api.user.task_json import pipeline_data_json
 from lost.settings import LOST_CONFIG, FLASK_DEBUG
-from lost.db import access, roles
+from lost.db import access, roles, state
 from lost.db.model import User as DBUser, Role, Group
 from lost.logic import email 
 from lost.logic.user import release_user_annos
@@ -17,28 +18,81 @@ import logging
 import hangar
 from pathlib import Path
 import numpy as np
+import json
 logger = logging.getLogger(__name__)
 namespace = api.namespace('user', description='Users in System.')
 
 
-def insert_new_pipelines(dbm, userid):
+def read_pipeline_config(path):
+    try:
+        with open(path / 'config.json', 'r') as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        logger.critical("Config file not found at {}".format(path))
+        data = {"numAnnot": 1, "currentAnnotCount": 0}
+    return data
+
+
+def write_pipeline_config(path, data):
+    with open(path / 'config.json', 'w+') as f:
+        json.dump(data, f)
+
+
+def pipeline_generator(path):
+    for folder in path.iterdir():
+        if 'covid' not in str(folder):
+            continue
+        config = read_pipeline_config(folder)
+        current_annot = config['currentAnnotCount']
+        annot_bal = config['numAnnot'] - current_annot
+        for _ in range(annot_bal):
+            yield folder
+            current_annot += 1
+            config['currentAnnotCount'] = current_annot
+            write_pipeline_config(folder, config)
+
+
+def user_generator(dbm):
+    user2taskcount = {}
+    for us in dbm.get_users():
+        if us.idx <= 5:
+            # Skipping first 5 users
+            continue
+        available_annotasks_count = 0
+        for annotask in dbm.get_available_annotask([us.idx]):
+            # TODO: get the count directly from the DB
+            if annotask.pipe_element.pipe.state == state.Pipe.PAUSED:
+                pass
+            else:
+                available_annotasks_count += 1
+        user2taskcount[us.idx] = available_annotasks_count
+    while True:
+        sortedusers = sorted(user2taskcount, key=lambda x: user2taskcount[x])
+        if len(sortedusers) == 0:
+            return
+        bestuser = sortedusers[0]
+        yield bestuser
+        user2taskcount[bestuser] += 1
+
+
+def insert_new_pipelines(dbm):
     logger.critical('>>>>>>>>>>>>>>>>>> Inserting new pipeline <<<<<<<<<<<<<<<<<<<<<<<<<<<<')
     data = pipeline_data_json
     adminid = 1
     admin_group_id = 1
-    user_group_id = 5
-    annotask_list = annotask_service.get_available_annotasks(dbm, [user_group_id], userid)
-    pipelineNames = [each['pipelineName'] for each in annotask_list]
-    for folder in Path(LOST_CONFIG.project_path).joinpath('data/media').iterdir():
-        logger.critical(folder)
-        if 'covid' in str(folder):
-            if folder.stem in pipelineNames:
-                continue
-            data['description'] = folder.stem
-            data['name'] = folder.stem
-            data['elements'][0]['datasource']['rawFilePath'] = folder.stem
-            data['elements'][2]['workerId'] = user_group_id
-            pipeline_service.start(dbm, data, adminid, admin_group_id)
+    usergen = user_generator(dbm)
+    for pipeline in pipeline_generator(Path(LOST_CONFIG.project_path).joinpath('data/media')):
+        try:
+            user = next(usergen)
+        except StopIteration:
+            logger.critical("No users are available for annotation")
+            break
+        logger.critical("Pipeline {} is assigning to {}".format(pipeline, user))
+        data['description'] = pipeline.stem
+        data['name'] = pipeline.stem
+        data['elements'][0]['datasource']['rawFilePath'] = pipeline.stem
+        data['elements'][2]['workerId'] = user
+        pipeline_service.start(dbm, data, adminid, admin_group_id)
     logger.critical('>>>>>>>>>>>>>>>>>> Dooooooooone Inserting new pipeline <<<<<<<<<<<<<<<<<<<<<<<<<<<<')
 
 
@@ -324,8 +378,7 @@ class UserLogin(Resource):
         data = login_parser.parse_args()
         if data['user_name'] == 'dbupdater':
             dbm = access.DBMan(LOST_CONFIG)
-            identity = dbm.find_user_by_user_name(data['user_name']).idx
-            insert_new_pipelines(dbm, identity)
+            insert_new_pipelines(dbm)
             dbm.close_session()
         dbm = access.DBMan(LOST_CONFIG)
         # find user in database
