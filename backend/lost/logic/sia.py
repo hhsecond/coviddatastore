@@ -5,6 +5,12 @@ from lost.db import dtype, state, model
 from lost.logic.anno_task import set_finished, update_anno_task
 from datetime import datetime
 from lost.logic.file_man import FileMan
+import logging
+from copy import deepcopy
+
+logger = logging.getLogger(__name__)
+
+
 __author__ = "Gereon Reus"
 
 def get_first(db_man, user_id, media_url):
@@ -169,12 +175,17 @@ def __is_last_image__(db_man, user_id, at_id, iteration, img_id):
     else:
         return True
 
-def update(db_man, data, user_id):
+def update(db_man, data, user_id, send_json=False):
     """ Update Image and TwoDAnnotation from SIA
     :type db_man: lost.db.access.DBMan
     """
     sia_update = SiaUpdate(db_man, data, user_id)
-    return sia_update.update()
+    update_status = sia_update.update()
+    if send_json:
+        return update_status, sia_update.points_with_ids
+    else:
+        return  update_status
+
 def finish(db_man, user_id):
     at = get_sia_anno_task(db_man, user_id)
     if at.idx: 
@@ -263,6 +274,7 @@ class SiaUpdate(object):
             self.__update_annotations(self.b_boxes, dtype.TwoDAnno.BBOX)
         if self.points is not None:
             self.__update_annotations(self.points, dtype.TwoDAnno.POINT)
+            self.points_with_ids = deepcopy(self.history_json)  # needed for hangar update
         if self.lines is not None:
             self.__update_annotations(self.lines, dtype.TwoDAnno.LINE)
         if self.polygons is not None:

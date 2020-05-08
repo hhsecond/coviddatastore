@@ -37,8 +37,8 @@ def get_repo(identity):
         repo.init(user_name=str(identity) + '_placeholder', user_email='placeholder@email.com')
         co = repo.checkout(write=True)
         co.add_str_column('paths')
-        co.add_ndarray_column('annotations', contains_subsamples=True, dtype=np.float64,
-                              variable_shape=True, shape=(200, 2))
+        co.add_ndarray_column('points', contains_subsamples=True, dtype=np.float64, shape=(2,))
+        co.add_ndarray_column('labels', contains_subsamples=True, dtype=np.int16, shape=(1,))
         co.commit('Added columns')
         co.close()
         # branch = 'branch' + str(identity)
@@ -152,25 +152,46 @@ class Update(Resource):
             logger.critical('+++++++++++++++ Sia update request.data +++++++++++++')
             logger.critical(request.data)
             data = json.loads(request.data)
-            # ================ Hangar Update =====================
-            all_polygon = {}
+            re, updated_data = sia.update(dbm, data, user.idx, send_json=True)
+            # ================ Hangar Update =====================  
             co = get_checkout(identity)
-            ann = co['annotations']
-            for each_polygon in data['annotations']['polygons']:
-                polygon_coordinates = []
-                coordinate_list = each_polygon['data']
-                for coordinate in coordinate_list:
-                    x, y = coordinate['x'], coordinate['y']
-                    polygon_coordinates.append([x, y])
-                label = each_polygon['labelIds'][0]
-                all_polygon[label] = np.array(polygon_coordinates, dtype=np.float64)
-            ann[data['imgId']] = all_polygon
+            imgid = data['imgId']
+            pointcol = co['points']
+            labelcol = co['labels']
+            new = updated_data['annotations']['new']
+            changed = updated_data['annotations']['changed']
+            deleted = updated_data['annotations']['deleted']
+            for point in new:
+                pointid = point['id']
+                labelid = point['labels'][0]['label_leaf_id'][0]
+                subdata = eval(point['data'])  # eval is baad! don't use it
+                x, y = subdata['x'], subdata['y']
+                pointarr = np.array([x, y], dtype=np.float64)
+                labelarr = np.array([labelid], dtype=np.int16)
+                pointcol[imgid] = {pointid: pointarr}
+                labelcol[imgid] = {pointid: labelarr}
+            for point in changed:
+                pointid = point['id']
+                labelid = point['labels'][0]['label_leaf_id'][0]
+                subdata = eval(point['data'])  # eval is baad! don't use it
+                x, y = subdata['x'], subdata['y']
+                pointarr = np.array([x, y], dtype=np.float64)
+                labelarr = np.array([labelid], dtype=np.int16)
+                pointcol[imgid] = {pointid: pointarr}
+                labelcol[imgid] = {pointid: labelarr}
+            for point in deleted:
+                pointid = point['id']
+                try:
+                    del pointcol[imgid][pointid]
+                    del labelcol[imgid][pointid]
+                except KeyError:
+                    logger.critical("This is really bad!. KeyError on deleting a supposedly"
+                                    "existing object {} in the image {}".format(pointid, imgId))
             try:
                 co.commit('added annotation')
             except RuntimeError as e:
                 logger.exception("No changes found to commit")
             # ========================================================
-            re = sia.update(dbm, data, user.idx)
             dbm.close_session()
             logger.critical('++++++++++++++++++ SIA update ++++++++++++++++++')
             logger.critical(re)
