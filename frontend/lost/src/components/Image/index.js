@@ -1,686 +1,815 @@
 import React from "react";
-import axios from "axios";
-import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
-import Spinner from "react-bootstrap/Spinner";
-import { Redirect } from "react-router-dom";
-
-import { API_URL } from "../../settings";
-
 import "./index.css";
-import Grid from "../Grid";
+import {
+  distance_between_two_vertical_points as xDiff,
+  minimum_left_margin,
+  minimum_top_margin,
+  default_label,
+  default_color,
+  colors
+} from "../../utils/variables";
+import "./index.css";
+import Button from "react-bootstrap/Button";
+import { Redirect } from "react-router-dom";
+import { saveAnnotationApi } from "../../api/image";
 
-let colors = {};
-let label_id_to_label = {};
-let hovered_points = [[], []];
-let hovered_coordinates = [[], []];
-let xOffsetAddition = 11;
-let yOffsetAddition = 15;
+var _yoffset = Math.sqrt(2 * xDiff * (2 * xDiff) - xDiff * xDiff);
 
-function InstructionModal(props) {
-  return (
-    <Modal
-      {...props}
-      size="lg"
-      aria-labelledby="contained-modal-title-vcenter"
-      centered
-    >
-      <Modal.Header closeButton>
-        <Modal.Title id="contained-modal-title-vcenter">
-          Instructions
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <ol>
-          <li>Select a label from radio button below</li>
-          <li>Click and hover over the points on image to annotate</li>
-          <li>Label can be changed as desired</li>
-          <li>
-            Click on next image or previous image button to save annotation
-          </li>
-        </ol>
-        - Arrow keys can be used to navigate over image when zoomed in.
-      </Modal.Body>
-      <Modal.Footer>
-        <Button onClick={props.onHide}>Close</Button>
-      </Modal.Footer>
-    </Modal>
-  );
-}
+let controlPressed = false;
+let zPrressed = false;
+let shiftPressed = false
 
-export default class Image extends React.Component {
+class Canvas extends React.Component {
   constructor(props) {
     super(props);
-    this.myRef = React.createRef();
+    this.isMouseDown = false;
+    this.undo_stack = [];
+    this.redo_stack = [];
+    this.temp_stack = [];
+    this.points_label_map = {};
+    this.points_label_map_original = {};
     this.state = {
-      imageLoaded: false,
-      imageDimentions: { width: null, height: null },
-      boxDimention: { width: null, height: null },
-      modalShow: false,
+      width: null,
+      height: null,
+      marginLeft: null,
+      marginTop: null,
+      // imageLoading: true,
       posting: false,
-      xOffset: 0,
-      yOffset: 0,
-
-      history_row_columns: [[], []],
-      history_coordinates: [[], []],
-      is_mousedown: false,
-
-      rows_columns_data: {},
-      coordinates_data: {},
-      static_data: {
-        imageUrl: null,
-        data: {}
-      },
-      colors: {},
-      // final_data: [],
-
-      points_to_label_mapping: [{}, {}],
-      value: { label: null, id: null },
-      color: null
+      value: null,
+      deletelater_index: 0,
+      redirect: false
     };
   }
 
-  componentDidMount() {
-    this.random_offset = {
-      // removing addition of 1 will be breaking change 
-      x: (this.props.imageId % 9) + 1,
-      y: (this.props.imageId % 6) + 5
-    };
-    this.setState({
-      xOffset: this.random_offset.x,
-      yOffset: this.random_offset.y * -1
-    });
-  }
+  keyDown = e => {
+    if (controlPressed == false && e.keyCode == 17) {
+      controlPressed = true;
+    }
 
-  reset = func => {
-    this.setState(
-      {
-        history_row_columns: [[], []],
-        history_coordinates: [[], []],
-        rows_columns_data: {},
-        coordinates_data: {},
-        redirect: false,
-        static_data: {
-          imageUrl: null,
-          data: {}
-        },
-        // final_data: [],
-        points_to_label_mapping: [{}, {}],
-        imageLoaded: false,
-        value: { label: null, id: null },
-        color: null
-      },
-      () => {
-        func();
+    if (controlPressed == true && zPrressed == false && e.keyCode == 90) {
+      if(shiftPressed == true){
+        this.redo()
+      }else{
+        this.undo();
       }
-    );
-  };
+    }
 
-  onImgLoad = ({ target: img }) => {
-    this.setStateWrapper({
-      imageDimentions: { height: img.offsetHeight, width: img.offsetWidth },
-      imageLoaded: true
-    });
-  };
-
-  componentDidUpdate = (prevProps, prevState) => {
-    if (this.state.static_data.imageUrl != this.props.imageUrl) {
-      let data = {};
-      if (this.props.annos.annotations.polygons.length) {
-        for (let i of this.props.annos.annotations.polygons) {
-          for (let j of i.data) {
-            if (j.x in data) {
-            } else {
-              data[j.x] = {};
-            }
-            data[j.x][j.y] = i.labelIds[0];
-          }
-        }
-      }
-      let _colors = {};
-      if (Object.keys(this.state.colors).length == 0) {
-        if (Object.keys(colors).length == 0) {
-        } else {
-          _colors = colors;
-        }
-      }
-
-      this.setState({
-        static_data: {
-          imageUrl: this.props.imageUrl,
-          data: data
-        },
-        colors: _colors
-      });
+    if (zPrressed == false && e.keyCode == 90) {
+      zPrressed = true;
+    }
+    if (shiftPressed == false && e.keyCode == 16) {
+      shiftPressed = true;
     }
   };
 
-  setStateWrapper = key_value_dict => {
-    this.setState(key_value_dict);
+  keyUp = e => {
+    if (zPrressed == true && e.keyCode == 90) {
+      zPrressed = false;
+    }
+    if (controlPressed == true && e.keyCode == 17) {
+      controlPressed = false;
+    }
+    if (shiftPressed == true && e.keyCode == 16) {
+      shiftPressed = false;
+    }
   };
 
-  changeHistory = () => {
-    let _history_row_columns = this.state.history_row_columns;
-    let _label = this.state.value.id;
-    let temp1 = { [_label]: hovered_points[0] };
-    let temp2 = { [_label]: hovered_points[1] };
-    _history_row_columns[0].push(temp1);
-    _history_row_columns[1].push(temp2);
-    this.setState({ history_row_columns: _history_row_columns });
+  getYCoordinated = (x, y) => {
+    let yLeft = null;
+    let yRight = null;
+    let yLeftTop = null;
+    let yLeftDown = null;
+    let yRightTop = null;
+    let yRightDown = null;
+    if (Math.trunc(x) % 2 == 0) {
+      if (y > this.state.marginTop + _yoffset) {
+        yLeft = (y - this.state.marginTop) / (_yoffset * 2) + 1;
+        yLeftTop =
+          this.state.marginTop + (Math.floor(yLeft) - 1) * (_yoffset * 2);
+        yLeftDown =
+          this.state.marginTop + (Math.ceil(yLeft) - 1) * (_yoffset * 2);
+        yRight = (y - (this.state.marginTop + _yoffset)) / (_yoffset * 2) + 1;
+        yRightTop =
+          this.state.marginTop +
+          _yoffset +
+          (Math.floor(yRight) - 1) * (_yoffset * 2);
+        yRightDown =
+          this.state.marginTop +
+          _yoffset +
+          (Math.ceil(yRight) - 1) * (_yoffset * 2);
+      } else {
+        if (y < this.state.marginTop) {
+          yLeftTop = -1;
+          yLeftDown = this.state.marginTop;
 
-    let _history_coordinates = this.state.history_coordinates;
-    temp1 = { [_label]: hovered_coordinates[0] };
-    temp2 = { [_label]: hovered_coordinates[1] };
-    _history_coordinates[0].push(temp1);
-    _history_coordinates[1].push(temp2);
-    return _history_coordinates;
-    // this.setState({ history_coordinates: _history_coordinates });
-  };
-
-  addAnnotiation = () => {
-    let _label = this.state.value.id;
-    let _rows_columns_data = this.state.rows_columns_data;
-    let _coordinates_data = this.state.coordinates_data;
-    if (_label in _rows_columns_data) {
-      _rows_columns_data[_label].concat(hovered_points[0]);
-      _rows_columns_data[_label].concat(hovered_points[1]);
-      _coordinates_data[_label].concat(hovered_coordinates[0]);
-      _coordinates_data[_label].concat(hovered_coordinates[1]);
+          yRightTop = -1;
+          yRightDown = this.state.marginTop + _yoffset;
+        } else {
+          yLeftTop = this.state.marginTop;
+          yLeftDown = this.state.marginTop + _yoffset * 2;
+          yRightTop = -1;
+          yRightDown = this.state.marginTop + _yoffset;
+        }
+      }
     } else {
-      _rows_columns_data[_label] = [...hovered_points[0], ...hovered_points[1]];
-      _coordinates_data[_label] = [
-        ...hovered_coordinates[0],
-        ...hovered_coordinates[1]
+      if (y > this.state.marginTop + _yoffset) {
+        yLeft = (y - (this.state.marginTop + _yoffset)) / (_yoffset * 2) + 1;
+        yLeftTop =
+          this.state.marginTop +
+          _yoffset +
+          (Math.floor(yLeft) - 1) * (_yoffset * 2);
+        yLeftDown =
+          this.state.marginTop +
+          _yoffset +
+          (Math.ceil(yLeft) - 1) * (_yoffset * 2);
+        yRight = (y - this.state.marginTop) / (_yoffset * 2) + 1;
+        yRightTop =
+          this.state.marginTop + (Math.floor(yRight) - 1) * (_yoffset * 2);
+        yRightDown =
+          this.state.marginTop + (Math.ceil(yRight) - 1) * (_yoffset * 2);
+      } else {
+        if (y < this.state.marginTop) {
+          yLeftTop = -1;
+          yLeftDown = this.state.marginTop + _yoffset;
+          yRightTop = -1;
+          yRightDown = this.state.marginTop;
+        } else {
+          yLeftTop = -1;
+          yLeftDown = this.state.marginTop + _yoffset;
+          yRightTop = this.state.marginTop;
+          yRightDown = this.state.marginTop + _yoffset * 2;
+        }
+      }
+    }
+    return [yLeftTop, yLeftDown, yRightTop, yRightDown];
+  };
+
+  getXCoordinate = (left, right) => {
+    if (left == 0) {
+      return [-1, this.state.marginLeft + xDiff * (right - 1)];
+    } else {
+      return [
+        this.state.marginLeft + xDiff * (left - 1),
+        this.state.marginLeft + xDiff * (right - 1)
       ];
     }
-    return [_rows_columns_data, _coordinates_data];
   };
 
-  changePointsLabels = () => {
-    let _label = this.state.value.id;
-    let _points_to_label_mapping = this.state.points_to_label_mapping;
-    let ii = 0;
-    while (ii < 2) {
-      for (let i = 0; i < hovered_points[ii].length; i++) {
-        if (hovered_points[ii][i][0] in _points_to_label_mapping[ii]) {
+  distanceBetweenPoints = (a, b) => {
+    return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
+  };
+
+  getNearestCoordinate = (coordinates_list, x, y, offset_limit) => {
+    // let _distances = []
+    let coordinates = null;
+    let _min = 9999999;
+    let _d = null;
+    for (let i = 0; i < coordinates_list.length; i++) {
+      _d = this.distanceBetweenPoints(coordinates_list[i], [x, y]);
+      if (_d < _min) {
+        _min = _d;
+        coordinates = coordinates_list[i];
+      }
+    }
+    if (_min > offset_limit) {
+      return null;
+    }
+
+    return coordinates;
+  };
+
+  paintCoordinate = (ctx, _coordinate, value, add_to_stack = true) => {
+    if (_coordinate) {
+      if (_coordinate[0] in this.points_label_map) {
+        if (_coordinate[1] in this.points_label_map[_coordinate[0]]) {
+          // point already colored
+
           if (
-            hovered_points[ii][i][1] in
-            _points_to_label_mapping[ii][hovered_points[ii][i][0]]
+            this.points_label_map[_coordinate[0]][_coordinate[1]]["id"] !==
+            value["id"]
           ) {
-          } else {
-            _points_to_label_mapping[ii][hovered_points[ii][i][0]][
-              hovered_points[ii][i][1]
-            ] = { label_id: _label, colors: colors[_label] };
+            // hovered over already colored point with a different color
+            if (value["color_id"] == -1) {
+              // erase colored points
+              if (add_to_stack == true) {
+                this.temp_stack.push([
+                  ..._coordinate,
+                  this.points_label_map[_coordinate[0]][_coordinate[1]]["id"],
+                  this.points_label_map[_coordinate[0]][_coordinate[1]][
+                    "color_id"
+                  ]
+                ]);
+              }
+              this.drawDots(
+                ctx,
+                _coordinate[0],
+                _coordinate[1],
+                2.2,
+                default_color
+              );
+              delete this.points_label_map[_coordinate[0]][_coordinate[1]];
+            } else {
+              // hovered over already colored point with a different color
+              this.points_label_map[_coordinate[0]][_coordinate[1]] = value;
+              if (add_to_stack == true) {
+                this.temp_stack.push(_coordinate);
+              }
+              this.drawDots(
+                ctx,
+                _coordinate[0],
+                _coordinate[1],
+                2,
+                colors[value["color_id"]]
+              );
+            }
           }
         } else {
-          _points_to_label_mapping[ii][hovered_points[ii][i][0]] = {
-            [hovered_points[ii][i][1]]: {
-              label_id: _label,
-              colors: colors[_label]
+          // point not colored
+
+          if (value["color_id"] == -1) {
+          } else {
+            this.points_label_map[_coordinate[0]][_coordinate[1]] = value;
+            if (add_to_stack == true) {
+              this.temp_stack.push(_coordinate);
             }
+            this.drawDots(
+              ctx,
+              _coordinate[0],
+              _coordinate[1],
+              2,
+              colors[value["color_id"]]
+            );
+          }
+        }
+      } else {
+        // point not colored
+
+        if (value["color_id"] == -1) {
+        } else {
+          this.points_label_map[_coordinate[0]] = {
+            [_coordinate[1]]: value
           };
+          if (add_to_stack == true) {
+            this.temp_stack.push(_coordinate);
+          }
+          this.drawDots(
+            ctx,
+            _coordinate[0],
+            _coordinate[1],
+            2,
+            colors[value["color_id"]]
+          );
         }
       }
-      ii++;
-    }
-
-    return _points_to_label_mapping;
-  };
-
-  // called when label is submitted
-  handleSubmit = () => {
-    if (hovered_points[0].length || hovered_points[1].length) {
-      // let changeHistoryData = this.changeHistory();
-      let addAnnotiationData = this.addAnnotiation();
-      let changePointsLabelsData = this.changePointsLabels();
-
-      //resetting the hovered data after
-      hovered_points = [[], []];
-      hovered_coordinates = [[], []];
-
-      return new Promise(resolve => {
-        this.setState(
-          {
-            // history_coordinates: changeHistoryData,
-            // rows_columns_data: addAnnotiationData[0],
-            coordinates_data: addAnnotiationData[1],
-            points_to_label_mapping: changePointsLabelsData
-          },
-          resolve
-        );
-      });
     }
   };
 
-  addToHoveredPoints = (x, y, row, column, grid_number) => {
-    hovered_points[grid_number].push([row, column]);
-    hovered_coordinates[grid_number].push([x, y]);
-  };
+  labelDots = (x, y, value, offset_limit, add_to_stack = true) => {
+    const canvas = this.refs.canvas;
+    const ctx = canvas.getContext("2d");
 
-  removedFromHoveredPoints = (x, y, row, column, grid_number) => {
-    let _coordinates_data = this.state.coordinates_data;
-    let _points_to_label_mapping = this.state.points_to_label_mapping;
-    for (let key in _coordinates_data) {
-      let _index = _coordinates_data[key].findIndex(
-        element => element[0] == x && element[1] == y
-      );
-      if (_index >= 0) {
-        _coordinates_data[key].splice(_index, 1);
+    let _x_number, _x_numberLeft, _x_numberRight;
+
+    let coordinates_list = [];
+
+    if (x - this.state.marginLeft > 0) {
+      _x_number = (x - this.state.marginLeft) / xDiff + 1;
+      _x_numberLeft = Math.floor(_x_number);
+      _x_numberRight = Math.ceil(_x_number);
+    } else {
+      _x_numberLeft = 0;
+      _x_numberRight = 1;
+    }
+    [_x_numberLeft, _x_numberRight] = this.getXCoordinate(
+      _x_numberLeft,
+      _x_numberRight
+    );
+
+    let yList = this.getYCoordinated(_x_number, y);
+
+    for (let i = 0; i < 2; i++) {
+      if (yList[i] !== -1 && _x_numberLeft !== -1) {
+        coordinates_list.push([_x_numberLeft, yList[i]]);
+      }
+    }
+    for (let i = 2; i < 4; i++) {
+      if (yList[i] !== -1 && _x_numberRight !== -1) {
+        coordinates_list.push([_x_numberRight, yList[i]]);
       }
     }
 
-    if (
-      row in _points_to_label_mapping[grid_number] &&
-      column in _points_to_label_mapping[grid_number][row]
+    let _coordinate = this.getNearestCoordinate(
+      coordinates_list,
+      x,
+      y,
+      offset_limit
+    );
+
+    this.paintCoordinate(ctx, _coordinate, value, add_to_stack);
+  };
+
+  drawDots = (ctx, x, y, radius, color) => {
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.beginPath();
+  };
+
+  drawDefaultDots = ctx => {
+    let _temp = 0;
+    for (
+      let x = this.state.marginLeft;
+      x < this.state.width;
+      x = x + xDiff, _temp++
     ) {
-      delete _points_to_label_mapping[grid_number][row][column];
-    }
-    this.setState({
-      coordinates_data: _coordinates_data,
-      points_to_label_mapping: _points_to_label_mapping
-    });
-  };
-
-  setModalShow = value => {
-    this.setState({ modalShow: value });
-  };
-
-  onClickNextButton = async imageProp => {
-    await this.handleSubmit();
-    if (Object.keys(this.state.coordinates_data).length !== 0) {
-      this.postAnnotationAsync().then(data => {
-        this.setState({ posting: false }, () => {
-          this.reset(this.props.nextImage);
-        });
-      });
-    } else {
-      this.reset(this.props.nextImage);
-    }
-  };
-
-  onClickFinishButton = async imageProp => {
-    await this.handleSubmit();
-    if (Object.keys(this.state.coordinates_data).length !== 0) {
-      this.postAnnotationAsync().then(data => {
-        this.setState({ redirect: true });
-      });
-    } else {
-      this.setState({ redirect: true });
-    }
-  };
-
-  renderNextButton = () => {
-    if (this.state.redirect) {
-      return <Redirect to="/dashboard" />;
-    }
-    if (this.props.annos.image.isLast) {
-      return (
-        <Button
-          type="button"
-          variant="danger"
-          onClick={() => {
-            this.onClickFinishButton();
-          }}
-        >
-          Finish
-        </Button>
-      );
-      //
-    } else {
-      return (
-        <Button
-          type="button"
-          disabled={this.state.posting}
-          onClick={() => {
-            this.onClickNextButton();
-          }}
-        >
-          {this.state.posting ? (
-            <Spinner
-              as="span"
-              animation="border"
-              size="sm"
-              role="status"
-              aria-hidden="true"
-            />
-          ) : (
-            "Next Image"
-          )}
-        </Button>
-      );
-    }
-  };
-
-  postAnnotationAsync = () => {
-    let payload;
-    let data = [];
-    let label_data = {};
-    for (let key in this.state.coordinates_data) {
-      label_data = {
-        labelIds: [key],
-        mode: "view",
-        status: "new",
-        type: "polygon",
-        data: []
-      };
-      for (let co of this.state.coordinates_data[key]) {
-        label_data["data"].push({ x: co[0], y: co[1] });
+      for (
+        let y = this.state.marginTop;
+        y < this.state.height;
+        y = y + _yoffset * 2
+      ) {
+        if (_temp % 2 == 0) {
+          this.drawDots(ctx, x, y + _yoffset, 2, default_color);
+        } else {
+          this.drawDots(ctx, x, y, 2, default_color);
+        }
       }
-      data.push(label_data);
     }
-    payload = {
+  };
+
+  getMousePos(canvas, evt) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: evt.clientX - rect.left,
+      y: evt.clientY - rect.top
+    };
+  }
+
+  deleteFromPointsLabelMap = (x, y) => {
+    if (x in this.points_label_map && y in this.points_label_map[x]) {
+      delete this.points_label_map[x][y];
+    }
+  };
+
+  undo = () => {
+    if (this.undo_stack.length > 0) {
+      let last = this.undo_stack.pop();
+      this.redo_stack.push(last);
+
+      if (last["id"] == -1) {
+        for (let i of last["points"]) {
+          this.labelDots(i[0], i[1], { id: i[2], color_id: i[3] }, 0, false);
+        }
+      } else {
+        for (let i of last["points"]) {
+          this.labelDots(i[0], i[1], { id: -1, color_id: -1 }, 0, false);
+        }
+
+        if (this.undo_stack.length > 0) {
+          last = this.undo_stack[this.undo_stack.length - 1];
+          for (let i of last["points"]) {
+            this.labelDots(
+              i[0],
+              i[1],
+              { id: last["id"], color_id: last["color_id"] },
+              0,
+              false
+            );
+          }
+        }
+      }
+    }
+  };
+
+  redo = () => {
+
+    if (this.redo_stack.length > 0) {
+      let last = this.redo_stack.pop();
+      this.undo_stack.push(last);
+
+      if (last["id"] == -1) {
+        for (let i of last["points"]) {
+          this.labelDots(i[0], i[1], { id: -1, color_id: -1 }, 0, false);
+        }
+      } else {
+        for (let i of last["points"]) {
+          this.labelDots(
+            i[0],
+            i[1],
+            { id: last["id"], color_id: last["color_id"] },
+            0,
+            false
+          );
+        }
+      }
+    }
+  };
+
+  getPayload = () => {
+    let _data = [];
+    let _label_data = {};
+    let is_data_present = false;
+
+    for (let x in this.points_label_map) {
+      for (let y in this.points_label_map[x]) {
+        if (
+          x in this.points_label_map_original &&
+          y in this.points_label_map_original[x]
+        ) {
+          if (
+            this.points_label_map_original[x][y]["label_id"] ==
+            this.points_label_map[x][y]["id"]
+          ) {
+          } else {
+            is_data_present = true;
+            _data.push({
+              type: "point",
+              id: this.points_label_map_original[x][y]["id"],
+              data: { x: x, y: y },
+              mode: "view",
+              status: "changed",
+              labelIds: [this.points_label_map[x][y]["id"]],
+              selectedNode: 0
+            });
+          }
+        } else {
+          is_data_present = true;
+          _data.push({
+            type: "point",
+            data: { x: x, y: y },
+            mode: "view",
+            status: "new",
+            labelIds: [this.points_label_map[x][y]["id"]],
+            selectedNode: 0
+          });
+        }
+      }
+    }
+
+    for (let x in this.points_label_map_original) {
+      for (let y in this.points_label_map_original[x]) {
+        if (x in this.points_label_map && y in this.points_label_map[x]) {
+        } else {
+          is_data_present = true;
+          _data.push({
+            type: "point",
+            id: this.points_label_map_original[x][y]["id"],
+            data: { x: x, y: y },
+            mode: "view",
+            status: "deleted",
+            labelIds: [this.points_label_map_original[x][y]["label_id"]],
+            selectedNode: 0
+          });
+        }
+      }
+    }
+
+    let payload = {
       imgId: this.props.imageId,
       imgLabelIds: [],
       imgLabelChanged: false,
       annotations: {
         bBoxes: [],
         lines: [],
-        points: [],
-        polygons: data
+        points: _data,
+        polygons: []
       },
       isJunk: null
     };
-    this.setState({ posting: true });
-
-    return axios
-      .post(API_URL + "/sia/update", payload)
-      .then(response => {
-        return response;
-      })
-      .catch(e => {
-        return e;
-      });
-    // return axios.get(API_URL + '/sia/label').then((response)=>{return response}).catch(e=> {return e} )
+    if (is_data_present == true) {
+      return payload;
+    } else {
+      return null;
+    }
   };
 
-  renderPrevButton = () => {
+  nextImage = () => {
+    this.setState({ posting: true }, () => {
+      let payload = this.getPayload();
+      if (payload !== null) {
+        saveAnnotationApi(payload).then(response => {
+          this.setState({ posting: false }, () => {
+            this.points_label_map = {};
+            this.undo_stack = [];
+            this.redo_stack = [];
+            this.props.nextImage();
+          });
+        });
+      } else {
+        this.setState({ posting: false }, () => {
+          this.points_label_map = {};
+          this.undo_stack = [];
+          this.redo_stack = [];
+          this.props.nextImage();
+        });
+      }
+    });
+  };
+
+  prevImage = () => {
+    this.setState({ posting: true }, () => {
+      let payload = this.getPayload();
+
+      if (payload !== null) {
+        saveAnnotationApi(payload).then(response => {
+          this.setState({ posting: false }, () => {
+            this.points_label_map = {};
+            this.undo_stack = [];
+            this.redo_stack = [];
+            this.props.prevImage();
+          });
+        });
+      } else {
+        this.setState({ posting: false }, () => {
+          this.points_label_map = {};
+          this.undo_stack = [];
+          this.redo_stack = [];
+          this.props.prevImage();
+        });
+      }
+    });
+  };
+
+  finish = () => {
+    this.setState({ posting: true }, () => {
+      let payload = this.getPayload();
+
+      saveAnnotationApi(payload).then(response => {
+        this.setState({ posting: false }, () => {
+          this.points_label_map = {};
+          this.undo_stack = [];
+          this.redo_stack = [];
+          this.setState({ redirect: true });
+        });
+      });
+    });
+  };
+
+  onChangeOfLabel = (_value, _index) => {
+    let value = _value;
+    if (value["id"] === -1) {
+      value["color_id"] = -1;
+    } else {
+      value["color_id"] = _index;
+    }
+    this.setState({
+      value: value
+    });
+  };
+
+  renderLabels = _labels => {
+    let labels = require("rfdc")({ proto: true })(_labels);
+    let returnElement = [];
+    labels.unshift({
+      id: -1,
+      label: "Remove Label",
+      nameAndClass: "Consolidation (Covid19)",
+      description: ""
+    });
+    for (let i = 0; i < labels.length; i++) {
+      returnElement.push(
+        <div className="input-screen">
+          <input
+            type="radio"
+            // checked={value.label === this.state.value.label}
+            name="colors"
+            onChange={e => {
+              this.onChangeOfLabel(labels[i], i);
+            }}
+          />
+          <div style={{ marginLeft: 10 }}>{labels[i].label}</div>
+          <div
+            style={{
+              marginLeft: 10,
+              backgroundColor: labels[i].id == -1 ? default_color : colors[i],
+              height: 10,
+              width: 10
+            }}
+          />
+        </div>
+      );
+    }
+
+    return returnElement;
+  };
+
+  renderLeftSideControls = () => {
     return (
-      <Button
-        type="button"
-        disabled={this.state.posting}
-        onClick={() => {
-          this.onClickPrevButton();
-        }}
-      >
+      <div>
+        {/* <div
+          onClick={() => {
+            console.log(
+              "*****",
+              this.undo_stack,
+              this.redo_stack,
+              this.points_label_map
+            );
+          }}
+        >
+          {" "}
+          console
+        </div>  */}
+        <h5 style={{ textAlign: "center" }}>
+          <u>Select a label</u>
+        </h5>
+        {this.props.labels.length ? this.renderLabels(this.props.labels) : null}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-around",
+            marginTop: 20
+          }}
+        >
+          <Button type="button" onClick={() => this.undo()}>
+            Undo
+          </Button>
+          <Button type="button" onClick={() => this.redo()}>
+            Redo
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  renderPreviousButton = () => {
+    return (
+      <Button type="button" onClick={() => this.prevImage()}>
         Previous Image
       </Button>
     );
   };
 
-  onClickPrevButton = async imageProp => {
-    await this.handleSubmit();
-    if (Object.keys(this.state.coordinates_data).length !== 0) {
-      this.postAnnotationAsync().then(data => {
-        this.setState({ posting: false }, () => {
-          this.reset(this.props.prevImage);
-        });
-      });
-    } else {
-      this.reset(this.props.prevImage);
+  renderNextButton = () => {
+    return (
+      <Button type="button" onClick={() => this.nextImage()}>
+        Next Image
+      </Button>
+    );
+  };
+
+  renderFinishButton = () => {
+    return (
+      <Button type="button" onClick={() => this.finish()}>
+        Finish
+      </Button>
+    );
+  };
+
+  getColorIndex = (data, labels, all_colors) => {
+    for (let label_index = 0; label_index < labels.length; label_index++) {
+      if (labels[label_index]["id"] == data["labelIds"][0]) {
+        return label_index + 1;
+      }
     }
   };
 
-  onChangeOfLabel = async (value, index) => {
-    await this.handleSubmit();
-    if (value.label == "erase") {
-      this.setState({
-        value: { label: value.label, id: value.id },
-        color: "grey"
-      });
-    } else {
-      this.setState({
-        value: { label: value.label, id: value.id },
-        color: this.props.colors[index]
-      });
+  drawOrigionalpoints = () => {
+    let data = {};
+    if (this.props.annos.annotations.points.length) {
+      for (let i of this.props.annos.annotations.points) {
+        let color_index = this.getColorIndex(i, this.props.labels, colors);
+        if (i.data["x"] in data) {
+        } else {
+          data[i.data["x"]] = {};
+        }
+        this.labelDots(
+          i.data["x"],
+          i.data["y"],
+          { id: i["labelIds"][0], color_id: color_index },
+          0.1,
+          false
+        );
+        data[i.data["x"]][i.data["y"]] = {
+          label_id: i.labelIds[0],
+          id: i["id"]
+        };
+      }
+      this.points_label_map_original = data;
     }
   };
 
-  renderLabels = () => {
-    return (
-      <React.Fragment>
-        <div className="input-screen-erase">
-          <input
-            type="radio"
-            checked={this.state.value.label === "erase"}
-            name="colors"
-            onChange={e => {
-              this.onChangeOfLabel({ label: "erase", id: -1 }, -1);
-            }}
-          />
-          <div style={{marginLeft: 20}}>{"Erase annotated points"}</div>
-        </div>
-        {this.props.labels.map((value, index) => {
-          if (value.label in colors) {
-          } else {
-            colors[value.id] = this.props.colors[index];
-          }
-          if (value.id in label_id_to_label) {
-          } else {
-            label_id_to_label[value.id] = value.label;
-          }
+  componentWillUnmount() {
+    document.removeEventListener("keydown", this.keyDown, false);
+    document.removeEventListener("keyup", this.keyUp, false);
+  }
 
-          return (
-            <div className="input-screen">
-              <input
-                type="radio"
-                checked={value.label === this.state.value.label}
-                name="colors"
-                onChange={e => {
-                  this.onChangeOfLabel(value, index);
-                }}
-              />
-              <div style={{ marginLeft: 10 }}>{value.label}</div>
-              <div
-                style={{
-                  marginLeft: 10,
-                  backgroundColor: this.props.colors[index],
-                  height: 10,
-                  width: 10
-                }}
-              />
-            </div>
-          );
-        })}
-      </React.Fragment>
+  componentDidMount() {
+    document.addEventListener("keydown", this.keyDown, false);
+    document.addEventListener("keyup", this.keyUp, false);
+    const canvas = this.refs.canvas;
+    const ctx = canvas.getContext("2d");
+    var _img_ = new Image();
+
+    _img_.onload = () => {
+      let _marinLeft = (this.props.imageId % 10) + minimum_left_margin;
+      let _marinTop = (this.props.imageId % 10) + minimum_top_margin;
+      this.setState(
+        {
+          width: _img_.width,
+          height: _img_.height,
+          marginLeft: _marinLeft,
+          marginTop: _marinTop
+          // imageLoading: false
+        },
+        () => {
+          ctx.drawImage(_img_, 0, 0);
+          this.drawDefaultDots(ctx);
+          this.drawOrigionalpoints();
+        }
+      );
+    };
+
+    // _img_.src = "https://www.telegraph.co.uk/content/dam/news/2017/11/11/Lam1_trans%2B%2BnAdySV0BR-4fDN_-_p756cVfcy8zLGPV4EhRkjQy7tg.jpg";
+    _img_.src = this.props.imageUrl;
+
+    canvas.addEventListener(
+      "mousemove",
+      evt => {
+        if (this.isMouseDown == true && this.state.value !== null) {
+          var mousePos = this.getMousePos(canvas, evt);
+          this.labelDots(mousePos.x, mousePos.y, this.state.value, 9);
+          this.redo_stack = [];
+        }
+      },
+      false
     );
-  };
 
-  renderImage = () => {
-    return (
-      <div
-        id="imageComponent"
-        style={{
-          width: 1100,
-          margin: "auto",
-          position: "relative"
-        }}
-        className="selectDisable"
-      >
-        <img
-          ref={this.myRef}
-          alt="annotation display"
-          onLoad={this.onImgLoad}
-          src={this.props.imageUrl}
-          className="image"
-          draggable="false"
-        />
-
-        <div
-          onMouseDown={e => {
-            this.setStateWrapper({ is_mousedown: true });
-          }}
-          onMouseUp={e => {
-            this.setStateWrapper({ is_mousedown: false });
-          }}
-          style={{
-            position: "absolute",
-            top: 0,
-            marginTop: this.state.yOffset,
-            left: this.state.xOffset,
-            width: 1120
-          }}
-        >
-          <Grid
-            xOffsetAddition={0}
-            yOffsetAddition={0}
-            xOffset={this.state.xOffset}
-            yOffset={this.state.yOffset}
-            random_offset={this.random_offset}
-            colors={this.state.colors}
-            static_data={this.state.static_data}
-            imageRef={this.myRef}
-            xMargin={
-              this.myRef.current
-                ? this.myRef.current.getBoundingClientRect()["x"]
-                : null
-            }
-            yMargin={
-              this.myRef.current
-                ? this.myRef.current.getBoundingClientRect()["y"]
-                : null
-            }
-            color={this.state.color}
-            label={this.state.value.label}
-            label_id={this.state.value.id}
-            image_url={this.props.imageUrl}
-            key={"0grid"}
-            grid_number={0}
-            points_to_label_mapping={this.state.points_to_label_mapping[0]}
-            removeHoveredPoints={this.removeHoveredPoints}
-            rows_columns_data={this.state.rows_columns_data}
-            addToHoveredPoints={this.addToHoveredPoints}
-            removedFromHoveredPoints={this.removedFromHoveredPoints}
-            imageDimentions={this.state.imageDimentions}
-            is_mousedown={this.state.is_mousedown}
-          />
-        </div>
-
-        <div
-          onMouseDown={e => {
-            this.setStateWrapper({ is_mousedown: true });
-          }}
-          onMouseUp={e => {
-            this.setStateWrapper({ is_mousedown: false });
-          }}
-          style={{
-            position: "absolute",
-            top: yOffsetAddition,
-            marginTop: this.state.yOffset,
-            left: this.state.xOffset + xOffsetAddition,
-            width: 1120
-          }}
-        >
-          <Grid
-            xOffsetAddition={xOffsetAddition}
-            yOffsetAddition={yOffsetAddition}
-            xOffset={this.state.xOffset}
-            yOffset={this.state.yOffset}
-            random_offset={this.random_offset}
-            colors={this.state.colors}
-            static_data={this.state.static_data}
-            imageRef={this.myRef}
-            xMargin={
-              this.myRef.current
-                ? this.myRef.current.getBoundingClientRect()["x"]
-                : null
-            }
-            yMargin={
-              this.myRef.current
-                ? this.myRef.current.getBoundingClientRect()["y"]
-                : null
-            }
-            color={this.state.color}
-            label={this.state.value.label}
-            label_id={this.state.value.id}
-            image_url={this.props.imageUrl}
-            key={"1grid"}
-            grid_number={1}
-            points_to_label_mapping={this.state.points_to_label_mapping[1]}
-            removeHoveredPoints={this.removeHoveredPoints}
-            rows_columns_data={this.state.rows_columns_data}
-            addToHoveredPoints={this.addToHoveredPoints}
-            removedFromHoveredPoints={this.removedFromHoveredPoints}
-            imageDimentions={this.state.imageDimentions}
-            is_mousedown={this.state.is_mousedown}
-          />
-        </div>
-      </div>
+    canvas.addEventListener(
+      "mousedown",
+      evt => {
+        this.isMouseDown = true;
+      },
+      false
     );
-  };
 
-  renderControls = () => {
-    return (
-      <div
-        style={{
-          // marginTop: 10,
-          // borderStyle: "solid",
-          // borderColor: "red",
-          justifyContent: "space-around"
-        }}
-        className="center-screen"
-      >
-        <div>
-          <div style={{ marginBottom: 5, textDecoration: "underline" }}>
-            <b>Select a label</b>
-          </div>
-          {this.props.labels.length ? this.renderLabels() : null}
-
-          <div style={{ marginTop: 20, marginBottom: 20 }}>
-            <Button
-              variant="warning"
-              type="button"
-              onClick={() => this.setModalShow(true)}
-            >
-              Instructions
-            </Button>
-
-            <InstructionModal
-              show={this.state.modalShow}
-              onHide={() => this.setModalShow(false)}
-            />
-          </div>
-          <div style={{ marginTop: 20, marginBottom: 20 }}>
-            <Button
-              variant="danger"
-              type="button"
-              onClick={() => this.reset(()=>{})}
-            >
-              Delete Unsaved Annotations
-            </Button>
-          </div>
-        </div>
-      </div>
+    canvas.addEventListener(
+      "mouseup",
+      evt => {
+        this.isMouseDown = false;
+        if (this.state.value !== null && this.temp_stack.length > 0) {
+          this.undo_stack.push({
+            points: this.temp_stack,
+            id: this.state.value["id"],
+            color_id: this.state.value["color_id"]
+          });
+          this.temp_stack = [];
+        }
+      },
+      false
     );
-  };
+
+    canvas.addEventListener(
+      "mouseleave",
+      evt => {
+        this.isMouseDown = false;
+        if (this.state.value !== null && this.temp_stack.length > 0) {
+          this.undo_stack.push({
+            points: this.temp_stack,
+            id: this.state.value["id"],
+            color_id: this.state.value["color_id"]
+          });
+          this.temp_stack = [];
+        }
+      },
+      false
+    );
+  }
 
   render() {
-    if (document.getElementById("imageComponent")) {
-      document.getElementById("imageComponent").style.cursor = "crosshair";
-    }
     return (
-      <div style={{ backgroundColor: "grey", overflow: "auto" }} id="container">
+      <div style={{ overflow: "auto", backgroundColor: "grey" }}>
+        {this.state.redirect ? <Redirect to="/dashboard" /> : null}
         <div style={{ textAlign: "center", color: "white", marginBottom: 30 }}>
           {this.props.annos.image.url}
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            marginLeft: 20,
-            marginRight: 20
-          }}
-        >
-          <div style={{ marginTop: 30 }}>{this.renderPrevButton()}</div>
-          <div style={{ flex: 0.5 }}>{this.renderControls()}</div>
-          <div style={{ flex: 2.5 }}>
-            {this.state.xOffset == 0 || this.state.yOffset == 0
-              ? null
-              : this.renderImage()}
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          <div
+            style={{
+              marginLeft: 10
+            }}
+          >
+            {this.renderPreviousButton()}
           </div>
-          <div style={{ marginTop: 30 }}>{this.renderNextButton()}</div>
+          <div className="left-control">{this.renderLeftSideControls()}</div>
+          <canvas
+            // id="canvasid"
+            ref="canvas"
+            width={this.state.width}
+            height={this.state.height}
+          />
+          <div
+            style={{
+              marginLeft: 10,
+              marginRight: 20
+            }}
+          >
+            {this.props.annos.image.isLast
+              ? this.renderFinishButton()
+              : this.renderNextButton()}
+          </div>
         </div>
-        <div style={{ marginBottom: 30, height: 30 }} />
       </div>
     );
   }
 }
+export default Canvas;

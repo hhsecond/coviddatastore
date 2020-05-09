@@ -40,12 +40,12 @@ export default class Grid extends React.Component {
           row={num_columns}
           grid_number={this.props.grid_number}
           label_data={this.point_label_data(i, num_columns)}
-          removeHoveredPoints={this.props.removeHoveredPoints}
           row_column={num_columns.toString() + "_" + i.toString()}
           addToHoveredPoints={this.props.addToHoveredPoints}
           is_mousedown={this.props.is_mousedown}
           imageDimentions={this.props.imageDimentions}
-          removedFromHoveredPoints={this.props.removedFromHoveredPoints}
+          removePointFromLabel={this.props.removePointFromLabel}
+          removeFromHoveredPoints={this.props.removeFromHoveredPoints}
         />
       );
     }
@@ -53,9 +53,24 @@ export default class Grid extends React.Component {
   };
 
   renderRow = () => {
-    let num_rows = this.props.imageDimentions.height? Math.floor((this.props.imageDimentions.height-(this.props.yOffset + 11 + this.props.yOffsetAddition+9))/(9+20)): -2;
-    num_rows = num_rows + 2
-    let num_points = Math.floor((1120-(this.props.xOffset + this.props.xOffsetAddition+9))/(9+14))
+    let num_rows = this.props.imageDimentions.height
+      ? Math.floor(
+          (this.props.imageDimentions.height -
+            (this.props.yOffset + 11 + this.props.yOffsetAddition + 9)) /
+            (9 + 20)
+        )
+      : -2;
+    num_rows = num_rows + 2;
+    let num_points = this.props.imageDimentions.width
+      ? Math.floor(
+          (this.props.imageDimentions.width +
+            10 -
+            (this.props.xOffset + this.props.xOffsetAddition + 9)) /
+            (9 + 14)
+        )
+      : -1;
+    num_points = num_points + 1;
+    // let num_points = 40
     let _list = [];
     let i = 0;
     for (i = 0; i < num_rows - 1; i++) {
@@ -75,6 +90,12 @@ export default class Grid extends React.Component {
   };
 
   render() {
-    return <div>{this.renderRow()}</div>;
+    return (
+      <div
+      // style={{ borderStyle: "solid", borderColor: "red" }}
+      >
+        {this.renderRow()}
+      </div>
+    );
   }
 }

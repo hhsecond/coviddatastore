@@ -46,7 +46,7 @@ const checkExpireDateCron = () => async dispatch => {
             localStorage.removeItem('refreshToken')
             localStorage.removeItem('view')
             dispatch({type: TYPES.LOGOUT})
-            window.location.replace('/#/timeout')
+            window.location.replace('/#/login')
         }
     }
 }
@@ -94,7 +94,7 @@ const refreshToken = () => async dispatch => {
             localStorage.removeItem('token')
             localStorage.removeItem('refreshToken')
             localStorage.removeItem('view')
-            window.location.replace('/#/timeout')
+            window.location.replace('/#/login')
         }
     }
 }

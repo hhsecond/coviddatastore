@@ -20,6 +20,9 @@ export default class Point extends React.Component {
   componentDidUpdate = (prevProps, prevState) => {
     if (prevProps.label_data) {
       if (this.props.label_data) {
+        if(this.props.label_data!=prevProps.label_data){
+          console.log(this.props.label_data, prevProps.label_data, "@@@@@@@@@@@@@@")
+        }
       } else {
         this.setState({ backgroundColor: "grey" });
       }
@@ -53,17 +56,17 @@ export default class Point extends React.Component {
 
   getXCoordinate = (row, column, xOffset, width) => {
     if (column > 0) {
-      return xOffset + width + (column - 1) * (14 + width) + 14 + width/2;
+      return xOffset + width + (column - 1) * (14 + width) + 14 + width / 2;
     } else {
-      return xOffset + width/2;
+      return xOffset + width / 2;
     }
   };
 
   getYCoordinate = (row, column, yOffset, height) => {
     if (row > 0) {
-      return yOffset + height + (row - 1) * (20 + height)+ 20 + height/2;
+      return yOffset + height + (row - 1) * (20 + height) + 20 + height / 2;
     } else {
-      return yOffset + height/2;
+      return yOffset + height / 2;
     }
   };
 
@@ -81,24 +84,25 @@ export default class Point extends React.Component {
         this.props.yOffset + 11 + this.props.yOffsetAddition,
         this.myRef.current.getBoundingClientRect()["height"]
       );
+
       if (this.props.color == "grey") {
+        // hover over already labelled points to reset color
         if (this.state.backgroundColor !== "grey") {
           if (
             xCoordinate in this.props.static_data.data &&
             yCoordinate in this.props.static_data.data[xCoordinate]
           ) {
           } else {
-            this.props.removedFromHoveredPoints(
-              xCoordinate,
-              yCoordinate,
-              parseInt(this.row),
-              parseInt(this.column),
+            this.props.removeFromHoveredPoints(
+              [[xCoordinate, yCoordinate]],
+              [[parseInt(this.row), parseInt(this.column)]],
               this.props.grid_number
             );
             //reset
           }
         }
       } else {
+        // hover over unlabelled points
         if (
           this.state.label === null &&
           this.state.backgroundColor === "grey"
@@ -118,28 +122,54 @@ export default class Point extends React.Component {
               );
             }
           }
+        }else{
+          //overriting unsaved labelled points
+          if (this.props.color && this.props.color != this.state.backgroundColor){
+            // console.log('hey', this.props.color, this.state.backgroundColor, this.props.label, this.props.label_data)
+            if (
+              yCoordinate <= this.props.imageDimentions.height &&
+              xCoordinate <= this.props.imageDimentions.width
+            ) {
+              this.setStateWrapper({ backgroundColor: this.props.color });
+              this.props.removePointFromLabel(
+                xCoordinate,
+                yCoordinate,
+                parseInt(this.row),
+                parseInt(this.column),
+                this.props.grid_number,
+                this.props.label_data['label_id']
+              );
+            }
+          }
         }
       }
     }
   };
 
   render() {
+    // if(this.props.label_data){
+    //   console.log("!!!!!!this.props.label_data", this.props.label_data)
+    // }
     return (
-      <span
-        className="span"
-        ref={this.myRef}
-        onMouseOver={this.onHover}
-      >
-        <div style={{display:'flex', flexDirection:'row', flexWrap: 'wrap'}}>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{backgroundColor: this.state.backgroundColor, width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
-          <div style={{ width:3, height:3}}></div>
+      <span className="span" ref={this.myRef} onMouseOver={this.onHover}>
+        <div
+          style={{ display: "flex", flexDirection: "row", flexWrap: "wrap" }}
+        >
+          <div style={{ width: 3, height: 3 }} />
+          <div style={{ width: 3, height: 3 }} />
+          <div style={{ width: 3, height: 3 }} />
+          <div style={{ width: 3, height: 3 }} />
+          <div
+            style={{
+              backgroundColor: this.state.backgroundColor,
+              width: 3,
+              height: 3
+            }}
+          />
+          <div style={{ width: 3, height: 3 }} />
+          <div style={{ width: 3, height: 3 }} />
+          <div style={{ width: 3, height: 3 }} />
+          <div style={{ width: 3, height: 3 }} />
         </div>
       </span>
     );

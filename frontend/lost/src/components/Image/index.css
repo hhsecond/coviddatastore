@@ -5,7 +5,7 @@
 
 .image {
   display: block;
-  width: 100%;
+  /* width: 100%; */
   height: auto;
   /* user-drag: none;  */
   -moz-user-select: none;
@@ -72,4 +72,12 @@
   align-items: center;
   /* text-align: center; */
   /* justify-content: space-between; */
+}
+
+.left-control{
+  margin-right: 20px;
+  margin-left: 20px;
+  flex-basis: 200px;
+  flex-grow: 0;
+  flex-shrink: 0;
 }
