@@ -77,7 +77,7 @@ if __name__ == '__main__':
             for i, (image, slice_count) in enumerate(nrrd2jpgs(nrrd)):
                 if count == 0:
                     folder = setup_directory(dest, file.stem)
-                elif count >= args.batch_size:
+                elif args.batch_size > 0 and count >= args.batch_size:
                     print(f"Added batch {folder}")
                     count = 0
                 save(image, str(folder / f"slice_{slice_count}.jpg"))
