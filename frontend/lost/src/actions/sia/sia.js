@@ -49,7 +49,8 @@ export const getSiaImage = (path) => async dispatch =>{
         type: 'image',
         token: localStorage.getItem('token')
     }
-    return await http.get(config)
+    let x = await http.get(config)
+    return x
 }
 
 export const selectAnnotation = (anno) => {
