@@ -465,6 +465,7 @@ class Canvas extends React.Component {
 
     let payload = {
       imgId: this.props.imageId,
+      url: this.props.annos['image']['url'],
       imgLabelIds: [],
       imgLabelChanged: false,
       annotations: {
