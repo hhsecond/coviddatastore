@@ -23,13 +23,15 @@ logger = logging.getLogger(__name__)
 namespace = api.namespace('user', description='Users in System.')
 
 
-def read_pipeline_config(path):
+def read_pipeline_config(path, remove=False):
+    configfile = path / 'config.json'
     try:
-        with open(path / 'config.json', 'r') as f:
+        with open(configfile, 'r') as f:
             data = json.load(f)
     except FileNotFoundError:
-        logger.critical("Config file not found at {}".format(path))
-        data = {"numAnnot": 1, "currentAnnotCount": 0}
+        return None
+    if remove:
+        configfile.unlink()
     return data
 
 
@@ -39,25 +41,33 @@ def write_pipeline_config(path, data):
 
 
 def pipeline_generator(path):
+    common_config_path = path / 'config.json'
+    if not common_config_path.exists():
+        common_config = {}
+    else:
+        with open(common_config_path, 'r') as f:
+            common_config = read_pipeline_config(path)
     for folder in path.iterdir():
         if 'covid' not in str(folder):
             continue
-        config = read_pipeline_config(folder)
+        config = read_pipeline_config(folder, remove=True)
+        if config is None:
+            config = common_config.get(str(folder), {"numAnnot": 1, "currentAnnotCount": 0})
+        common_config[str(folder)] = config
+        write_pipeline_config(path, common_config)
         current_annot = config['currentAnnotCount']
         annot_bal = config['numAnnot'] - current_annot
         for _ in range(annot_bal):
             yield folder
             current_annot += 1
             config['currentAnnotCount'] = current_annot
-            write_pipeline_config(folder, config)
+            common_config[str(folder)] = config
+            write_pipeline_config(path, common_config)
 
 
 def user_generator(dbm):
     user2taskcount = {}
-    for us in dbm.get_users():
-        if us.idx <= 5:
-            # Skipping first 5 users
-            continue
+    for us in dbm.get_group_by_name('annotators').users:
         available_annotasks_count = 0
         for annotask in dbm.get_available_annotask([us.idx]):
             # TODO: get the count directly from the DB
@@ -92,7 +102,7 @@ def insert_new_pipelines(dbm):
         data['name'] = pipeline.stem
         data['elements'][0]['datasource']['rawFilePath'] = pipeline.stem
         data['elements'][2]['workerId'] = user
-        pipeline_service.start(dbm, data, adminid, admin_group_id)
+        pipeline_service.start(dbm, data, adminid, user)
     logger.critical('>>>>>>>>>>>>>>>>>> Dooooooooone Inserting new pipeline <<<<<<<<<<<<<<<<<<<<<<<<<<<<')
 
 

@@ -1,3 +1,4 @@
+import threading
 from flask import request
 from flask_restplus import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -49,6 +50,58 @@ def get_repo(identity):
     return repo
 
 
+
+def update_hangar(identity, imgid, imgurl, data):
+    co = get_checkout(identity)
+    path = co['paths']
+    if imgid not in path:
+        path[imgid] = imgurl
+    pointcol = co['points']
+    labelcol = co['labels']
+    new = data['annotations']['new']
+    changed = data['annotations']['changed']
+    deleted = data['annotations']['deleted']
+    for point in new:
+        pointid = point['id']
+        labelid = point['labels'][0]['label_leaf_id'][0]
+        subdata = eval(point['data'])  # eval is baad! don't use it
+        x, y = subdata['x'], subdata['y']
+        pointarr = np.array([x, y], dtype=np.float64)
+        labelarr = np.array([labelid], dtype=np.int16)
+        pointcol[imgid] = {pointid: pointarr}
+        labelcol[imgid] = {pointid: labelarr}
+    for point in changed:
+        pointid = point['id']
+        labelid = point['labels'][0]['label_leaf_id'][0]
+        subdata = eval(point['data'])  # eval is baad! don't use it
+        x, y = subdata['x'], subdata['y']
+        pointarr = np.array([x, y], dtype=np.float64)
+        labelarr = np.array([labelid], dtype=np.int16)
+        pointcol[imgid] = {pointid: pointarr}
+        labelcol[imgid] = {pointid: labelarr}
+    for point in deleted:
+        pointid = point['id']
+        try:
+            del pointcol[imgid][pointid]
+            del labelcol[imgid][pointid]
+        except KeyError:
+            logger.critical("This is really bad!. KeyError on deleting a supposedly"
+                            "existing object {} in the image {}".format(pointid, imgId))
+    try:
+        co.commit('added annotation')
+    except RuntimeError as e:
+        logger.exception("No changes found to commit")
+
+
+def update_db_and_hangar(dbm, data, userid):
+    re, updated_data = sia.update(dbm, data, userid, send_json=True)
+    logger.critical(f"DB updated: {re}")
+    dbm.close_session()
+    update_hangar(userid, data['imgId'], data['url'], updated_data)
+    logger.critical(f"Hangar updated")
+
+
+
 @namespace.route('/first')
 class First(Resource):
     @api.marshal_with(sia_anno)
@@ -84,15 +137,6 @@ class Next(Resource):
             dbm.close_session()
             logger.critical('++++++++++++++++++ SIA next ++++++++++++++++++')
             logger.critical(re)
-            # ======================== Hangar update ========================
-            imid = re['image']['id']
-            imurl = re['image']['url']
-            co = get_checkout(identity)
-            path = co['paths']
-            if imid not in path:
-                path[imid] = imurl
-                co.commit('Addding path')
-            # ===============================================================
             return re
 
 @namespace.route('/prev/<int:last_img_id>')
@@ -152,51 +196,10 @@ class Update(Resource):
             logger.critical('+++++++++++++++ Sia update request.data +++++++++++++')
             logger.critical(request.data)
             data = json.loads(request.data)
-            re, updated_data = sia.update(dbm, data, user.idx, send_json=True)
-            # ================ Hangar Update =====================  
-            co = get_checkout(identity)
-            imgid = data['imgId']
-            pointcol = co['points']
-            labelcol = co['labels']
-            new = updated_data['annotations']['new']
-            changed = updated_data['annotations']['changed']
-            deleted = updated_data['annotations']['deleted']
-            for point in new:
-                pointid = point['id']
-                labelid = point['labels'][0]['label_leaf_id'][0]
-                subdata = eval(point['data'])  # eval is baad! don't use it
-                x, y = subdata['x'], subdata['y']
-                pointarr = np.array([x, y], dtype=np.float64)
-                labelarr = np.array([labelid], dtype=np.int16)
-                pointcol[imgid] = {pointid: pointarr}
-                labelcol[imgid] = {pointid: labelarr}
-            for point in changed:
-                pointid = point['id']
-                labelid = point['labels'][0]['label_leaf_id'][0]
-                subdata = eval(point['data'])  # eval is baad! don't use it
-                x, y = subdata['x'], subdata['y']
-                pointarr = np.array([x, y], dtype=np.float64)
-                labelarr = np.array([labelid], dtype=np.int16)
-                pointcol[imgid] = {pointid: pointarr}
-                labelcol[imgid] = {pointid: labelarr}
-            for point in deleted:
-                pointid = point['id']
-                try:
-                    del pointcol[imgid][pointid]
-                    del labelcol[imgid][pointid]
-                except KeyError:
-                    logger.critical("This is really bad!. KeyError on deleting a supposedly"
-                                    "existing object {} in the image {}".format(pointid, imgId))
-            try:
-                co.commit('added annotation')
-            except RuntimeError as e:
-                logger.exception("No changes found to commit")
-            # ========================================================
-            dbm.close_session()
+            threading.Thread(target=update_db_and_hangar, args=(dbm, data, user.idx)).start()
             logger.critical('++++++++++++++++++ SIA update ++++++++++++++++++')
-            logger.critical(re)
             logger.critical(data)
-            return re
+            return 'success'
 
 @namespace.route('/finish')
 class Finish(Resource):
