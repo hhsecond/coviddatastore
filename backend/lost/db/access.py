@@ -478,9 +478,17 @@ class DBMan(object):
         # sql = "SELECT * FROM image_anno WHERE user_id=%d AND anno_task_id=%d AND idx>%d AND iteration=%d LIMIT 1"\
         #  %(user_id, anno_task_id, img_anno_id, iteration)
         return self.session.query(model.ImageAnno).filter(model.ImageAnno.anno_task_id==anno_task_id, \
-                                                       model.ImageAnno.user_id== user_id, \
+                                                       model.ImageAnno.user_id==user_id, \
                                                        model.ImageAnno.idx > img_anno_id, \
                                                        model.ImageAnno.iteration==iteration).first()
+
+    def get_next_non_user_specific_sia_anno_by_last_anno(self, anno_task_id, img_anno_id, iteration):
+        ''' Get next sia annotation of an anno_task. Similar to above but without user id check
+        '''
+        return self.session.query(model.ImageAnno).filter(model.ImageAnno.anno_task_id==anno_task_id, \
+                                                       model.ImageAnno.idx > img_anno_id, \
+                                                       model.ImageAnno.iteration==iteration).first()
+
 
     def get_two_d_anno_by_img_anno(self, img_anno_id, iteration):
         ''' Get all two_d annotation of an image annotation

@@ -50,56 +50,67 @@ def get_repo(identity):
     return repo
 
 
+def get_annotations_from_hangar(userid, imgid):
+    co = get_checkout(userid)
+    out = []
+    try:
+        pointsubcol = co['points', imgid]
+    except KeyError:
+        logger.critical(f"Could not find any annotations in hangar for: {imgid} for the user {userid}")
+    else:
+        # TODO: If keyerror
+        labelsubcol = co['labels', imgid]
+        for pid, dt in pointsubcol.items():
+            lbl = labelsubcol[pid]
+            bare_dict = {'id': pid, 'data': {'x': dt[0].item(), 'y': dt[1].item()}, 'labelIds': [lbl.item()]}
+            out.append(bare_dict)
+    return out
 
-def update_hangar(identity, imgid, imgurl, data):
+
+def update_hangar(identity, data):
+    # TODO: Commit data
     co = get_checkout(identity)
-    path = co['paths']
-    if imgid not in path:
-        path[imgid] = imgurl
-    pointcol = co['points']
-    labelcol = co['labels']
-    new = data['annotations']['new']
-    changed = data['annotations']['changed']
-    deleted = data['annotations']['deleted']
-    for point in new:
-        pointid = point['id']
-        labelid = point['labels'][0]['label_leaf_id'][0]
-        subdata = eval(point['data'])  # eval is baad! don't use it
-        x, y = subdata['x'], subdata['y']
-        pointarr = np.array([x, y], dtype=np.float64)
-        labelarr = np.array([labelid], dtype=np.int16)
-        pointcol[imgid] = {pointid: pointarr}
-        labelcol[imgid] = {pointid: labelarr}
-    for point in changed:
-        pointid = point['id']
-        labelid = point['labels'][0]['label_leaf_id'][0]
-        subdata = eval(point['data'])  # eval is baad! don't use it
-        x, y = subdata['x'], subdata['y']
-        pointarr = np.array([x, y], dtype=np.float64)
-        labelarr = np.array([labelid], dtype=np.int16)
-        pointcol[imgid] = {pointid: pointarr}
-        labelcol[imgid] = {pointid: labelarr}
-    for point in deleted:
-        pointid = point['id']
-        try:
-            del pointcol[imgid][pointid]
-            del labelcol[imgid][pointid]
-        except KeyError:
-            logger.critical("This is really bad!. KeyError on deleting a supposedly"
-                            "existing object {} in the image {}".format(pointid, imgId))
+    with co:
+        imgid = data['imgId']
+        url = data['url']
+        pointcol = co['points']
+        labelcol = co['labels']
+        points = data['annotations']['points']
+        pathcol = co['paths']
+        if imgid not in pathcol:
+            pathcol[imgid] = url
+        pointid = len(pointcol.get(imgid, {}))
+        pointdict = {}
+        labeldict = {}
+        for point in points:
+            labelid = point['labelIds'][0]
+            status = point['status']
+            if status == 'new':
+                x, y = float(point['data']['x']), float(point['data']['y'])
+                pointdict[pointid] = np.array([x, y], dtype=np.float64)
+                labeldict[pointid] = np.array([labelid], dtype=np.int16)
+                pointid += 1
+            elif status == 'changed':
+                pointid = point['id']
+                labelid = point['labels'][0]['label_leaf_id'][0]
+                labeldict[pointid] = np.array([labelid], dtype=np.int16)
+            elif status == 'deleted':
+                pointid = point['id']
+                try:
+                    del pointcol[imgid][pointid]
+                    del labelcol[imgid][pointid]
+                except KeyError:
+                    logger.critical("This is really bad!. KeyError on deleting a supposedly"
+                                "existing object {} in the image {}".format(pointid, imgId))
+            else:
+                logger.critical(f"I don't care about thist status: {status}")
+        pointcol[imgid] = pointdict
+        labelcol[imgid] = labeldict
     try:
         co.commit('added annotation')
+        logger.critical("Updated hangar")
     except RuntimeError as e:
         logger.exception("No changes found to commit")
-
-
-def update_db_and_hangar(dbm, data, userid):
-    re, updated_data = sia.update(dbm, data, userid, send_json=True)
-    logger.critical(f"DB updated: {re}")
-    dbm.close_session()
-    update_hangar(userid, data['imgId'], data['url'], updated_data)
-    logger.critical(f"Hangar updated")
-
 
 
 @namespace.route('/first')
@@ -115,6 +126,8 @@ class First(Resource):
             return "You need to be {} in order to perform this request.".format(roles.ANNOTATOR), 401
         else:
             re = sia.get_first(dbm, identity, DATA_URL)
+            logger.critical('++++++++++++++++++ SIA first ++++++++++++++++++')
+            logger.critical(re)
             dbm.close_session()
             return re
 
@@ -132,11 +145,13 @@ class Next(Resource):
             return "You need to be {} in order to perform this request.".format(roles.ANNOTATOR), 401
 
         else:
+            logger.critical('++++++++++++++++++ SIA next ++++++++++++++++++')
             last_img_id = int(last_img_id)
             re = sia.get_next(dbm, identity,last_img_id, DATA_URL)
-            dbm.close_session()
-            logger.critical('++++++++++++++++++ SIA next ++++++++++++++++++')
+            logger.critical(f"Last image id: {last_img_id}. New image id: {str(re['image']['id'])}")
+            re['annotations']['points'] = get_annotations_from_hangar(identity, re['image']['id'])
             logger.critical(re)
+            dbm.close_session()
             return re
 
 @namespace.route('/prev/<int:last_img_id>')
@@ -154,8 +169,10 @@ class Prev(Resource):
 
         else:
             re = sia.get_previous(dbm, identity,last_img_id, DATA_URL)
-            dbm.close_session()
             logger.critical('++++++++++++++++++ SIA prev ++++++++++++++++++')
+            logger.critical(f"Last image id: {last_img_id}. New image id: {str(re['image']['id'])}")
+            dbm.close_session()
+            re['annotations']['points'] = get_annotations_from_hangar(identity, re['image']['id'])
             logger.critical(re)
             return re
 
@@ -177,6 +194,9 @@ class Last(Resource):
                 re = sia.get_next(dbm, identity, last_sia_image_id, DATA_URL)
             else:
                 re = sia.get_next(dbm, identity, -1, DATA_URL)
+            re['annotations']['points'] = get_annotations_from_hangar(identity, re['image']['id'])
+            logger.critical('++++++++++++++++++ SIA last edited ++++++++++++++++++')
+            logger.critical(re)
             dbm.close_session()
             return re
 
@@ -188,18 +208,24 @@ class Update(Resource):
         dbm = access.DBMan(LOST_CONFIG)
         identity = get_jwt_identity()
         user = dbm.get_user_by_id(identity)
+        dbm.close_session()
         if not user.has_role(roles.ANNOTATOR):
-            dbm.close_session()
             return "You need to be {} in order to perform this request.".format(roles.ANNOTATOR), 401
 
         else:
             logger.critical('+++++++++++++++ Sia update request.data +++++++++++++')
             logger.critical(request.data)
             data = json.loads(request.data)
-            threading.Thread(target=update_db_and_hangar, args=(dbm, data, user.idx)).start()
-            logger.critical('++++++++++++++++++ SIA update ++++++++++++++++++')
-            logger.critical(data)
-            return 'success'
+            update_hangar(user.idx, data)
+            # threading.Thread(target=update_hangar, args=(user.idx, data)).start()
+            data['annotations'] = {'bBoxes': [], 'lines': [], 'points': [], 'polygons': []}
+            re = sia.update(dbm, data, user.idx)
+            dbm.close_session()
+            # t = threading.Thread(target=update_db_and_hangar, args=(data, user.idx))
+            # t.start()
+            # t.join()
+            # update_db_and_hangar.delay(data, user.idx)
+            return re
 
 @namespace.route('/finish')
 class Finish(Resource):
@@ -214,6 +240,8 @@ class Finish(Resource):
 
         else:
             re = sia.finish(dbm, identity)
+            logger.critical('++++++++++++++++++ SIA Finish ++++++++++++++++++')
+            logger.critical(re)
             dbm.close_session()
             return re
 

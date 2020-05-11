@@ -58,7 +58,8 @@ def get_next(db_man, user_id, img_id, media_url):
                         image_anno_id = tmp_anno.idx
                         image_anno = db_man.get_image_anno(image_anno_id)
         else:
-            image_anno = db_man.get_next_sia_anno_by_last_anno(at.idx, user_id, img_id, iteration)
+            # image_anno = db_man.get_next_sia_anno_by_last_anno(at.idx, user_id, img_id, iteration)
+            image_anno = db_man.get_next_non_user_specific_sia_anno_by_last_anno(at.idx, img_id, iteration)
             if image_anno is None:
                 tmp_annos =  db_man.get_next_locked_sia_anno(at.idx, user_id, iteration)
                 if len(tmp_annos) > 0:
@@ -89,6 +90,7 @@ def get_previous(db_man, user_id, img_id, media_url):
     """
     at = get_sia_anno_task(db_man, user_id)
     iteration = db_man.get_pipe_element(pipe_e_id=at.pipe_element_id).iteration
+    logger.critical(f'+++++++++++++++ PREV: {at.idx} {user_id} {img_id} {iteration}')
     image_anno = db_man.get_previous_sia_anno(at.idx, user_id, img_id, iteration)
     is_last_image = False
     is_first_image = False
