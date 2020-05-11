@@ -208,8 +208,8 @@ class Update(Resource):
         dbm = access.DBMan(LOST_CONFIG)
         identity = get_jwt_identity()
         user = dbm.get_user_by_id(identity)
-        dbm.close_session()
         if not user.has_role(roles.ANNOTATOR):
+            dbm.close_session()
             return "You need to be {} in order to perform this request.".format(roles.ANNOTATOR), 401
 
         else:
