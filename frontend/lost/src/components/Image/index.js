@@ -12,6 +12,8 @@ import "./index.css";
 import Button from "react-bootstrap/Button";
 import { Redirect } from "react-router-dom";
 import { saveAnnotationApi } from "../../api/image";
+import Spinner from "react-bootstrap/Spinner";
+
 
 var _yoffset = Math.sqrt(2 * xDiff * (2 * xDiff) - xDiff * xDiff);
 
@@ -633,9 +635,12 @@ class Canvas extends React.Component {
   };
 
   renderPreviousButton = () => {
+    if(this.props.annos['image']['isFirst'] == true){
+      return null
+    }
     return (
       <Button type="button" onClick={() => this.prevImage()}>
-        Previous Image
+        {this.state.posting?<Spinner animation="border" size="sm" />:'Previous Image'}
       </Button>
     );
   };
@@ -643,7 +648,7 @@ class Canvas extends React.Component {
   renderNextButton = () => {
     return (
       <Button type="button" onClick={() => this.nextImage()}>
-        Next Image
+        {this.state.posting?<Spinner animation="border" size="sm" />:'Next Image'}
       </Button>
     );
   };
