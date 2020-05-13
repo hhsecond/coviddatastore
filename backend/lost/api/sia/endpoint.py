@@ -83,16 +83,16 @@ def update_hangar(identity, data):
         pointdict = {}
         labeldict = {}
         for point in points:
-            labelid = point['labelIds'][0]
             status = point['status']
             if status == 'new':
+                labelid = point['labelIds'][0]
                 x, y = float(point['data']['x']), float(point['data']['y'])
                 pointdict[pointid] = np.array([x, y], dtype=np.float64)
                 labeldict[pointid] = np.array([labelid], dtype=np.int16)
                 pointid += 1
             elif status == 'changed':
                 pointid = point['id']
-                labelid = point['labels'][0]['label_leaf_id'][0]
+                labelid = point['labelIds'][0]
                 labeldict[pointid] = np.array([labelid], dtype=np.int16)
             elif status == 'deleted':
                 pointid = point['id']
