@@ -68,4 +68,5 @@ if __name__ == '__main__':
             nrrd, image_header = load(str(file))
             folder = setup_directory(dest, file.stem)
             for image, slice_count in nrrd2jpgs(nrrd):
-                save(image, str(folder / f"slice_{slice_count}.jpg"))
+                # slice count + 100 -> to start the counter from 100 to keep the string comparision fair
+                save(image, str(folder / f"slice_{slice_count + 100}.jpg"))
