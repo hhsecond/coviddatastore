@@ -161,6 +161,7 @@ class UserList(Resource):
                 co.add_str_column('paths')
                 co.add_ndarray_column('points', contains_subsamples=True, dtype=np.float64, shape=(2,))
                 co.add_ndarray_column('labels', contains_subsamples=True, dtype=np.int16, shape=(1,))
+                co.add_str_column('pointcount')
                 co.commit('Added columns')
                 co.close()
             # ######################################

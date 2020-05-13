@@ -499,9 +499,7 @@ class DBMan(object):
     def get_previous_sia_anno(self, anno_task_id, user_id, img_anno_id, iteration):
         ''' Get a previous image annotation by current annotation id
         '''
-        sql = "SELECT * FROM image_anno WHERE iteration=%d AND anno_task_id=%d AND idx=(SELECT max(idx)\
-         FROM image_anno WHERE idx<%d\
-         AND user_id=%d)"\
+        sql = "SELECT * FROM image_anno WHERE iteration=%d AND anno_task_id=%d AND idx<%d AND user_id=%d ORDER BY idx DESC"\
          %(iteration, anno_task_id, img_anno_id, user_id)
         img_anno = self.session.execute(sql).first()
         if img_anno:

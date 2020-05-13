@@ -40,6 +40,7 @@ def get_repo(identity):
         co.add_str_column('paths')
         co.add_ndarray_column('points', contains_subsamples=True, dtype=np.float64, shape=(2,))
         co.add_ndarray_column('labels', contains_subsamples=True, dtype=np.int16, shape=(1,))
+        co.add_str_column('pointcount')
         co.commit('Added columns')
         co.close()
         # branch = 'branch' + str(identity)
@@ -75,41 +76,44 @@ def update_hangar(identity, data):
         url = data['url']
         pointcol = co['points']
         labelcol = co['labels']
+        countcol = co['pointcount']
         points = data['annotations']['points']
         pathcol = co['paths']
         if imgid not in pathcol:
             pathcol[imgid] = url
-        pointid = len(pointcol.get(imgid, {}))
+        newpointid = int(countcol.get(imgid, -1))
         pointdict = {}
         labeldict = {}
         for point in points:
             status = point['status']
             if status == 'new':
+                newpointid += 1
                 labelid = point['labelIds'][0]
                 x, y = float(point['data']['x']), float(point['data']['y'])
-                pointdict[pointid] = np.array([x, y], dtype=np.float64)
-                labeldict[pointid] = np.array([labelid], dtype=np.int16)
-                pointid += 1
+                pointdict[newpointid] = np.array([x, y], dtype=np.float64)
+                labeldict[newpointid] = np.array([labelid], dtype=np.int16)
             elif status == 'changed':
-                pointid = point['id']
+                currentpointid = point['id']
                 labelid = point['labelIds'][0]
-                labeldict[pointid] = np.array([labelid], dtype=np.int16)
+                labeldict[currentpointid] = np.array([labelid], dtype=np.int16)
             elif status == 'deleted':
-                pointid = point['id']
+                currentpointid = point['id']
                 try:
-                    del pointcol[imgid][pointid]
-                    del labelcol[imgid][pointid]
+                    del pointcol[imgid][currentpointid]
+                    del labelcol[imgid][currentpointid]
                 except KeyError:
                     logger.critical("This is really bad!. KeyError on deleting a supposedly"
-                                "existing object {} in the image {}".format(pointid, imgId))
+                                "existing object {} in the image {}".format(currentpointid, imgId))
             else:
                 logger.critical(f"I don't care about thist status: {status}")
         pointcol[imgid] = pointdict
         labelcol[imgid] = labeldict
     try:
+        countcol[imgid] = str(newpointid)
         co.commit('added annotation')
         logger.critical("Updated hangar")
     except RuntimeError as e:
+        # TODO: return a failure or catch no commit exception specifically
         logger.exception("No changes found to commit")
 
 
