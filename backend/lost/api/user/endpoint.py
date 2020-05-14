@@ -73,7 +73,6 @@ def user_generator(dbm):
         usergroup = username2group[us.user_name]
         available_annotasks_count = 0
         for annotask in dbm.get_available_annotask([usergroup.idx]):
-            # TODO: get the count directly from the DB
             if annotask.pipe_element.pipe.state == state.Pipe.PAUSED:
                 pass
             else:

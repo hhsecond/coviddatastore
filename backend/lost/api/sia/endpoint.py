@@ -69,7 +69,6 @@ def get_annotations_from_hangar(userid, imgid):
 
 
 def update_hangar(identity, data):
-    # TODO: Commit data
     co = get_checkout(identity)
     with co:
         imgid = data['imgId']
@@ -108,8 +107,8 @@ def update_hangar(identity, data):
                 logger.critical(f"I don't care about thist status: {status}")
         pointcol[imgid] = pointdict
         labelcol[imgid] = labeldict
-    try:
         countcol[imgid] = str(newpointid)
+    try:
         co.commit('added annotation')
         logger.critical("Updated hangar")
     except RuntimeError as e:
