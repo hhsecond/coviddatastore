@@ -30,8 +30,66 @@ def create_first_user(dbm):
             first_name= 'LOST',
             last_name='Admin'
         )
+        annotator_role = Role(name=roles.ANNOTATOR)
         user.roles.append(Role(name=roles.DESIGNER))
-        user.roles.append(Role(name=roles.ANNOTATOR))
+        user.roles.append(annotator_role)
+        user.groups.append(Group(name=user.user_name, is_user_default=True))
+        dbm.save_obj(user)
+        annotator_group = Group(name='annotators', is_user_default=True)
+        dbm.save_obj(annotator_group)
+
+
+    if not dbm.find_user_by_user_name('dbupdater'):
+        user = User(
+            user_name = 'dbupdater',
+            email='dbupd@example.com',
+            email_confirmed_at=datetime.datetime.utcnow(),
+            password='dbupd',
+            first_name= 'dbupd',
+            last_name='db'
+        )
+        user.roles.append(annotator_role)
+        user.groups.append(Group(name=user.user_name, is_user_default=True))
+        dbm.save_obj(user)
+    
+    if not dbm.find_user_by_user_name('sherin'):
+        user = User(
+            user_name = 'sherin',
+            email='sherin@example.com',
+            email_confirmed_at=datetime.datetime.utcnow(),
+            password='sherin',
+            first_name= 'sherin',
+            last_name='C'
+        )
+        user.roles.append(annotator_role)
+        user.groups.append(Group(name=user.user_name, is_user_default=True))
+        user.groups.append(annotator_group)
+        dbm.save_obj(user)
+
+    if not dbm.find_user_by_user_name('nisheet'):
+        user = User(
+            user_name = 'nisheet',
+            email='nisheet@example.com',
+            email_confirmed_at=datetime.datetime.utcnow(),
+            password='nisheet',
+            first_name= 'nisheet',
+            last_name='C'
+        )
+        user.roles.append(annotator_role)
+        user.groups.append(Group(name=user.user_name, is_user_default=True))
+        user.groups.append(annotator_group)
+        dbm.save_obj(user)
+
+    if not dbm.find_user_by_user_name('lantiga'):
+        user = User(
+            user_name = 'lantiga',
+            email='lantiga@example.com',
+            email_confirmed_at=datetime.datetime.utcnow(),
+            password='lantiga',
+            first_name= 'lantiga',
+            last_name='C'
+        )
+        user.roles.append(annotator_role)
         user.groups.append(Group(name=user.user_name, is_user_default=True))
         dbm.save_obj(user)
 
