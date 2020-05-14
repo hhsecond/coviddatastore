@@ -23,7 +23,7 @@ def main():
 def create_first_user(dbm):
     if not dbm.find_user_by_user_name('admin'):
         user = User(
-            user_name = 'admin',
+            user_name = 'admin@123321',
             email='admin@example.com',
             email_confirmed_at=datetime.datetime.utcnow(),
             password='admin',
@@ -63,35 +63,46 @@ def create_first_user(dbm):
         )
         user.roles.append(annotator_role)
         user.groups.append(Group(name=user.user_name, is_user_default=True))
-        user.groups.append(annotator_group)
         dbm.save_obj(user)
 
-    if not dbm.find_user_by_user_name('nisheet'):
-        user = User(
-            user_name = 'nisheet',
-            email='nisheet@example.com',
-            email_confirmed_at=datetime.datetime.utcnow(),
-            password='nisheet',
-            first_name= 'nisheet',
-            last_name='C'
-        )
-        user.roles.append(annotator_role)
-        user.groups.append(Group(name=user.user_name, is_user_default=True))
-        user.groups.append(annotator_group)
-        dbm.save_obj(user)
+    # if not dbm.find_user_by_user_name('nisheet'):
+    #     user = User(
+    #         user_name = 'nisheet',
+    #         email='nisheet@example.com',
+    #         email_confirmed_at=datetime.datetime.utcnow(),
+    #         password='nisheet',
+    #         first_name= 'nisheet',
+    #         last_name='C'
+    #     )
+    #     user.roles.append(annotator_role)
+    #     user.groups.append(Group(name=user.user_name, is_user_default=True))
+    #     dbm.save_obj(user)
 
-    if not dbm.find_user_by_user_name('lantiga'):
-        user = User(
-            user_name = 'lantiga',
-            email='lantiga@example.com',
-            email_confirmed_at=datetime.datetime.utcnow(),
-            password='lantiga',
-            first_name= 'lantiga',
-            last_name='C'
-        )
-        user.roles.append(annotator_role)
-        user.groups.append(Group(name=user.user_name, is_user_default=True))
-        dbm.save_obj(user)
+    # if not dbm.find_user_by_user_name('lantiga'):
+    #     user = User(
+    #         user_name = 'lantiga',
+    #         email='lantiga@example.com',
+    #         email_confirmed_at=datetime.datetime.utcnow(),
+    #         password='lantiga',
+    #         first_name= 'lantiga',
+    #         last_name='C'
+    #     )
+    #     user.roles.append(annotator_role)
+    #     user.groups.append(Group(name=user.user_name, is_user_default=True))
+    #     dbm.save_obj(user)
+
+    # if not dbm.find_user_by_user_name('alessia'):
+    #     user = User(
+    #         user_name = 'alessia',
+    #         email='alessia@example.com',
+    #         email_confirmed_at=datetime.datetime.utcnow(),
+    #         password='alessia',
+    #         first_name= 'alessia',
+    #         last_name='C'
+    #     )
+    #     user.roles.append(annotator_role)
+    #     user.groups.append(Group(name=user.user_name, is_user_default=True))
+    #     dbm.save_obj(user)
 
 
 if __name__ == '__main__':
