@@ -124,7 +124,7 @@ class UserList(Resource):
         else:
             users = dbm.get_users()
             for us in users:
-                for g in usergroup.groups:
+                for g in us.groups:
                     if g.is_user_default:
                         us.groups.remove(g)
             dbm.close_session()
