@@ -23,7 +23,7 @@ def main():
 def create_first_user(dbm):
     if not dbm.find_user_by_user_name('admin'):
         user = User(
-            user_name = 'admin@123321',
+            user_name = 'crazyadminpassword',
             email='admin@example.com',
             email_confirmed_at=datetime.datetime.utcnow(),
             password='admin',
