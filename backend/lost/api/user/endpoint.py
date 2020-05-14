@@ -67,15 +67,19 @@ def pipeline_generator(path):
 
 def user_generator(dbm):
     user2taskcount = {}
-    for us in dbm.get_group_by_name('annotators').users:
+    annotation_group = dbm.get_group_by_name('annotators')
+    username2group = {g.name: g for g in dbm.get_groups()}
+    for us in annotation_group.users:
+        usergroup = username2group[us.user_name]
         available_annotasks_count = 0
-        for annotask in dbm.get_available_annotask([us.idx]):
+        for annotask in dbm.get_available_annotask([usergroup.idx]):
             # TODO: get the count directly from the DB
             if annotask.pipe_element.pipe.state == state.Pipe.PAUSED:
                 pass
             else:
                 available_annotasks_count += 1
-        user2taskcount[us.idx] = available_annotasks_count
+        user2taskcount[usergroup.idx] = available_annotasks_count
+    logger.critical(f"user2taskcount: {user2taskcount}")
     while True:
         sortedusers = sorted(user2taskcount, key=lambda x: user2taskcount[x])
         if len(sortedusers) == 0:
@@ -93,16 +97,16 @@ def insert_new_pipelines(dbm):
     usergen = user_generator(dbm)
     for pipeline in pipeline_generator(Path(LOST_CONFIG.project_path).joinpath('data/media')):
         try:
-            user = next(usergen)
+            usergroupid = next(usergen)
         except StopIteration:
             logger.critical("No users are available for annotation")
             break
-        logger.critical("Pipeline {} is assigning to {}".format(pipeline, user))
+        logger.critical("Pipeline {} is assigning to {}".format(pipeline, usergroupid))
         data['description'] = pipeline.stem
         data['name'] = pipeline.stem
         data['elements'][0]['datasource']['rawFilePath'] = pipeline.stem
-        data['elements'][2]['workerId'] = user
-        pipeline_service.start(dbm, data, adminid, user)
+        data['elements'][2]['annoTask']['workerId'] = usergroupid
+        pipeline_service.start(dbm, data, adminid, admin_group_id)
     logger.critical('>>>>>>>>>>>>>>>>>> Dooooooooone Inserting new pipeline <<<<<<<<<<<<<<<<<<<<<<<<<<<<')
 
 
@@ -121,7 +125,7 @@ class UserList(Resource):
         else:
             users = dbm.get_users()
             for us in users:
-                for g in us.groups:
+                for g in usergroup.groups:
                     if g.is_user_default:
                         us.groups.remove(g)
             dbm.close_session()

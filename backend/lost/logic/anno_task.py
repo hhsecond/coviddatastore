@@ -4,6 +4,10 @@ from datetime import datetime
 from lost.pyapi import pipe_elements
 import pandas as pd
 from lost.logic import email
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def update_anno_task(dbm, anno_task_id, user_id=None):
     remaining = None
@@ -110,8 +114,11 @@ def get_available_annotasks(dbm, group_ids, user_id):
     Returns:
         json with all data of the available tasks
     '''
+    logger.critical('========== Get available annotasks ===============')
+    logger.critical(f"groupids: {group_ids}, userid: {user_id}")
     available_annotasks = list()
     for annotask in dbm.get_available_annotask(group_ids):
+        logger.critical(f"Annotask available -> {annotask.idx}: {annotask.name}")
         if annotask.pipe_element.pipe.state == state.Pipe.PAUSED:
             pass
         else:
