@@ -61,12 +61,26 @@ def setup_directory(dest, foldername):
     return folder
 
 
+def process_file(file, dest):
+    print(f"Processing {file.stem}")
+    nrrd, image_header = load(str(file))
+    folder = setup_directory(dest, file.stem)
+    for image, slice_count in nrrd2jpgs(nrrd):
+        # slice count + 100 -> to start the counter from 100 to keep the string comparision fair
+        save(image, str(folder / f"slice_{slice_count + 100}.jpg"))
+
+
+
+
 if __name__ == '__main__':
-    for file in src.iterdir():
-        if file.suffix == '.nrrd':
-            print(f"Processing {file.stem}")
-            nrrd, image_header = load(str(file))
-            folder = setup_directory(dest, file.stem)
-            for image, slice_count in nrrd2jpgs(nrrd):
-                # slice count + 100 -> to start the counter from 100 to keep the string comparision fair
-                save(image, str(folder / f"slice_{slice_count + 100}.jpg"))
+    if src.is_file():
+        if src.suffix == '.nrrd':
+            process_file(src, dest)
+        else:
+            print(f"Found files which are not nrrd, ignoring: {src}")
+    else:
+        for file in src.iterdir():
+            if file.suffix == '.nrrd':
+                process_file(file, dest)
+            else:
+                print(f"Found files which are not nrrd, ignoring: {file}")
