@@ -35,7 +35,7 @@ def create_first_user(dbm):
         user.roles.append(annotator_role)
         user.groups.append(Group(name=user.user_name, is_user_default=True))
         dbm.save_obj(user)
-        annotator_group = Group(name='annotators', is_user_default=True)
+        annotator_group = Group(name='annotators', manager_id=1)
         dbm.save_obj(annotator_group)
 
 
