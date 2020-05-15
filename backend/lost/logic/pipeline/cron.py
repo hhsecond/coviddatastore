@@ -169,7 +169,9 @@ class PipeEngine(pipe_model.PipeEngine):
                         env = self.select_env_for_script(pipe_e)
                         if env is None:
                             return
-                        celery_exec_script.apply_async(args=[pipe_e.idx], queue=env)
+                        tsk = celery_exec_script.apply_async(args=[pipe_e.idx], queue=env)
+                        tsk.AsyncResult(tsk.request.id).get()
+                        # celery_exec_script(pipe_e.idx)
             elif pipe_e.dtype == dtype.PipeElement.ANNO_TASK:
                 if pipe_e.state == state.PipeElement.PENDING:
                     update_anno_task(self.dbm, pipe_e.anno_task.idx)

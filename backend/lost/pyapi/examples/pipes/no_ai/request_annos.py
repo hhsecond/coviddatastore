@@ -45,7 +45,9 @@ class RequestAnnos(script.Script):
                 annos.append(box)
                 anno_types.append('bbox')
                 lbls.append(random.sample(possible_labels, 2))
-            for img_file in os.listdir(media_path):
+            img_files = os.listdir(media_path)
+            img_files.sort()
+            for img_file in img_files:
                 img_path = os.path.join(media_path, img_file)
                 self.outp.request_annos(img_path=img_path, annos=annos, anno_types=anno_types, anno_labels=lbls)
                 self.logger.info('Requested annos for: {}'.format(img_path))

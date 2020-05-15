@@ -5,6 +5,10 @@ from lost.db import state
 import os
 import json
 import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Input(object):
     '''Class that represants an input of a pipeline element.
