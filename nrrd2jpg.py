@@ -63,7 +63,7 @@ def nrrd2jpgs(nrrd_image, masked_image):
 
     for i in range(start, end, args.stride):
         im = nrrd_image[:, :, i]
-        yield bytescale(im, high=args.scale_high, low=args.scale_low)
+        yield bytescale(im, high=args.scale_high, low=args.scale_low), i
     print(f'=====> Image with {nrrd_image.shape[-1]} slices. Start: {start}, End: {end}')
 
 
@@ -84,8 +84,7 @@ def process_file(file, masked_file, dest):
     nrrd, image_header = load(str(file))
     masked_nrrd, masked_image_header = load(str(masked_file))
     folder = setup_directory(dest, file.stem)
-    i = 0
-    for i, image in enumerate(nrrd2jpgs(nrrd, masked_nrrd)):
+    for image, i in nrrd2jpgs(nrrd, masked_nrrd):
         # slice count + 100 -> to start the counter from 100 to keep the string comparision fair
         save(image, str(folder / f"slice_{i + 100}.jpg"))
 
