@@ -17,7 +17,7 @@ except (ImportError, ModuleNotFoundError):
 
 parser = argparse.ArgumentParser(description='Convert directory full of nrrd to jpg')
 parser.add_argument('--src', default='src', help='Source from the nrrd files are')
-parser.add_argument('--maskedSrc', dest='masked_src', default='masked', help='Source for the masks')
+parser.add_argument('--mask-src', dest='mask_src', default='masked', help='Source for the masks')
 parser.add_argument('--dest', default='~/lost/data/data/media',
                     help='Destination to which the jpg folders are copied')
 parser.add_argument('--numAnnot', '-a', dest='num_annot', default=1, type=int,
@@ -26,7 +26,7 @@ parser.add_argument('--scaleHigh', dest='scale_high', default=255, type=int,
                     help='``high`` argument to bytescale function. Scale max value to `high`.  Default is 255')
 parser.add_argument('--scaleLow', dest='scale_low', default=0, type=int,
                     help='``low`` argument to bytescale function. Scale min value to `low`.  Default is 0.')
-parser.add_argument('--startOffset', dest='start', default=2, type=int,
+parser.add_argument('--startOffset', dest='start', default=20, type=int,
                     help='Starting offset index. Slices before this index will be ignored from each nrrd files')
 parser.add_argument('--endOffset', dest='end', default=2, type=int,
                     help='Ending offset index. Slices after this index will be ignored from each nrrd files')
@@ -36,7 +36,7 @@ args = parser.parse_args()
 
 
 src = Path(args.src)
-masked_src = Path(args.masked_src)
+mask_src = Path(args.mask_src)
 dest = Path(args.dest)
 config = {"numAnnot": args.num_annot, "currentAnnotCount": 0}
 
@@ -94,11 +94,11 @@ def process_file(file, masked_file, dest):
 if __name__ == '__main__':
     if src.is_file():
         if src.suffix == '.nrrd':
-            process_file(src, masked_src, dest)
+            process_file(src, mask_src, dest)
         else:
             print(f"Found files which are not nrrd, ignoring: {src}")
     else:
-        pname2maskedpath = {file.stem.split('_')[0]: file for file in masked_src.iterdir()}
+        pname2maskedpath = {file.stem.split('_')[0]: file for file in mask_src.iterdir()}
         for file in src.iterdir():
             if file.suffix == '.nrrd':
                 masked_file = pname2maskedpath.get(file.stem)
