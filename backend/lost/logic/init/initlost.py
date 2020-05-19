@@ -63,6 +63,7 @@ def create_first_user(dbm):
         )
         user.roles.append(annotator_role)
         user.groups.append(Group(name=user.user_name, is_user_default=True))
+        # user.groups.append(annotator_group)
         dbm.save_obj(user)
 
     # if not dbm.find_user_by_user_name('nisheet'):

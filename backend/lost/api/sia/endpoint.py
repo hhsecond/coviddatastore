@@ -3,6 +3,7 @@ from flask import request
 from flask_restplus import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from lost.api.api import api
+from lost.api.sia import tasks
 from lost.api.sia.api_definition import sia_anno, sia_config, sia_update
 from lost.api.label.api_definition import label_trees
 from lost.db import roles, access
@@ -21,11 +22,17 @@ namespace = api.namespace('sia', description='SIA Annotation API.')
 _global_checkout_map = {}
 
 
+def get_branch(identity):
+    return 'branch' + str(identity)
+
+
+
 def get_checkout(identity):
     co = _global_checkout_map.get(identity)
     if co is None:
         repo = get_repo(identity)
-        co = repo.checkout(write=True)
+        branch = get_branch(identity)
+        co = repo.checkout(write=True, branch=branch)
         _global_checkout_map[identity] = co
     return co
 
@@ -43,8 +50,8 @@ def get_repo(identity):
         co.add_str_column('pointcount')
         co.commit('Added columns')
         co.close()
-        # branch = 'branch' + str(identity)
-        # repo.create_branch(branch)
+        branch = get_branch(identity)
+        repo.create_branch(branch)
     else:
         if repo.writer_lock_held:
             repo.force_release_writer_lock()
@@ -110,6 +117,7 @@ def update_hangar(identity, data):
         countcol[imgid] = str(newpointid)
     try:
         co.commit('added annotation')
+        tasks.upload_hangar.delay(identity)
         logger.critical("Updated hangar")
     except RuntimeError as e:
         # TODO: return a failure or catch no commit exception specifically
