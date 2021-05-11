@@ -35,7 +35,7 @@
     "font-awesome": "^4.7.0",
     "jwt-decode": "^2.2.0",
     "l3p-frontend": "^3.2.12",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "lost-sia": "0.0.0-alpha-13",
     "node-sass": "^4.13.1",
     "prop-types": "^15.6.2",
